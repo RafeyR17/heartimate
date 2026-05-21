@@ -1,0 +1,8 @@
+# Local Supabase CLI config (optional). Production Clerk TPA is configured in the dashboard.
+# See docs/CLERK_SUPABASE_SETUP.md and `npm run auth:wire`.
+
+project_id = "honzonljbkehnubekvgc"
+
+[auth.third_party.clerk]
+enabled = true
+domain = "whole-fly-20.clerk.accounts.dev"

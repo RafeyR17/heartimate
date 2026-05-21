@@ -1,0 +1,612 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Heartimate API",
+    "version": "0.1.0",
+    "description": "Authenticated JSON APIs plus a streaming chat endpoint. All JSON responses include `success`. Errors include `error`. Responses include `x-request-id` for correlation."
+  },
+  "servers": [{ "url": "/", "description": "App origin" }],
+  "tags": [
+    { "name": "chat", "description": "Streaming LLM chat" },
+    { "name": "chats", "description": "Chat sessions" },
+    { "name": "messages", "description": "Per-message edits" },
+    { "name": "characters", "description": "Character catalog & CRUD" },
+    { "name": "personas", "description": "User personas" },
+    { "name": "users", "description": "Current user profile" },
+    { "name": "onboarding", "description": "Onboarding starters & first chat" },
+    { "name": "reports", "description": "Character reports" },
+    { "name": "meta", "description": "Health & OpenAPI" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "clerkSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__session",
+        "description": "Clerk session cookie (browser) or Bearer from Clerk"
+      }
+    },
+    "headers": {
+      "RequestId": {
+        "description": "Correlation id (client may send; server always returns)",
+        "schema": { "type": "string" }
+      },
+      "IdempotencyKey": {
+        "description": "Optional dedupe key for POST /api/chat (8-128 chars, [a-zA-Z0-9_-])",
+        "schema": { "type": "string" }
+      }
+    },
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "required": ["success", "error"],
+        "properties": {
+          "success": { "const": false },
+          "error": { "type": "string" },
+          "code": {
+            "type": "string",
+            "description": "Machine-readable code (see lib/api-error-codes.ts)"
+          },
+          "retryAfter": { "type": "integer", "description": "Seconds (429 only)" }
+        }
+      },
+      "ChatPostRequest": {
+        "type": "object",
+        "required": ["chatId", "content"],
+        "properties": {
+          "chatId": { "type": "string" },
+          "content": { "type": "string", "maxLength": 4000 },
+          "omitUserPersist": {
+            "type": "boolean",
+            "description": "Regenerate / edit-resend: reuse last user row"
+          }
+        }
+      },
+      "ChatsPostRequest": {
+        "type": "object",
+        "required": ["characterId"],
+        "properties": {
+          "characterId": { "type": "string" },
+          "personaId": { "type": "string", "nullable": true },
+          "skipDefaultPersona": { "type": "boolean" }
+        }
+      },
+      "ChatsPostResponse": {
+        "type": "object",
+        "required": ["success", "chatId"],
+        "properties": {
+          "success": { "const": true },
+          "chatId": { "type": "string" },
+          "personaId": { "type": "string", "nullable": true }
+        }
+      },
+      "MessagesPageResponse": {
+        "type": "object",
+        "required": ["success", "messages", "hasMore", "nextCursor"],
+        "properties": {
+          "success": { "const": true },
+          "messages": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Message" }
+          },
+          "hasMore": { "type": "boolean" },
+          "nextCursor": { "type": "string", "nullable": true }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "role": { "enum": ["user", "assistant"] },
+          "content": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "MessagePatchRequest": {
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+          "content": { "type": "string", "maxLength": 4000 },
+          "truncateAfter": { "type": "boolean", "default": false }
+        }
+      },
+      "OnboardingPostRequest": {
+        "type": "object",
+        "required": ["displayName", "starterCharId"],
+        "properties": {
+          "displayName": { "type": "string", "maxLength": 50 },
+          "kinkPrefs": { "type": "array", "items": { "type": "string" } },
+          "starterCharId": { "type": "string" },
+          "characterName": { "type": "string", "maxLength": 80 }
+        }
+      },
+      "ReportsPostRequest": {
+        "type": "object",
+        "required": ["characterId", "reason"],
+        "properties": {
+          "characterId": { "type": "string" },
+          "reason": {
+            "enum": [
+              "Inappropriate content",
+              "Spam / Low quality",
+              "Harassment",
+              "Other"
+            ]
+          },
+          "details": { "type": "string", "maxLength": 2000 }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Not signed in",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+        }
+      },
+      "RateLimited": {
+        "description": "Too many requests",
+        "headers": {
+          "Retry-After": { "schema": { "type": "integer" } }
+        },
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+        }
+      }
+    }
+  },
+  "security": [{ "clerkSession": [] }],
+  "paths": {
+    "/api/chat": {
+      "post": {
+        "tags": ["chat"],
+        "summary": "Stream assistant reply",
+        "description": "Returns `text/plain` stream. Relationship metadata in response headers (not JSON body).",
+        "parameters": [
+          { "$ref": "#/components/headers/IdempotencyKey" },
+          { "$ref": "#/components/headers/RequestId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChatPostRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token stream",
+            "headers": {
+              "x-request-id": { "$ref": "#/components/headers/RequestId" },
+              "X-Special-Reply": { "schema": { "type": "string" } },
+              "X-Level-Up": { "schema": { "type": "string" } },
+              "X-Relationship-Level": { "schema": { "type": "string" } },
+              "X-Relationship-Label": { "schema": { "type": "string" } },
+              "X-Relationship-Color": { "schema": { "type": "string" } },
+              "X-Relationship-Progress": { "schema": { "type": "string" } },
+              "X-Relationship-Score": { "schema": { "type": "string" } },
+              "X-Relationship-Next": { "schema": { "type": "string" } }
+            },
+            "content": {
+              "text/plain": { "schema": { "type": "string" } }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "409": { "description": "Duplicate idempotency key in progress" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "description": "Rate limit or idempotency ledger unavailable" }
+        }
+      }
+    },
+    "/api/chats": {
+      "post": {
+        "tags": ["chats"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChatsPostRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChatsPostResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chats/{chatId}/messages": {
+      "get": {
+        "tags": ["chats", "messages"],
+        "parameters": [
+          { "name": "chatId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50, "maximum": 100 } },
+          { "name": "before", "in": "query", "description": "Message id cursor for older page", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessagesPageResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["chats"],
+        "summary": "Clear chat messages (optional greeting reset)",
+        "parameters": [
+          { "name": "chatId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "emptyOnly": { "type": "boolean" } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Cleared" } }
+      }
+    },
+    "/api/messages/{messageId}": {
+      "patch": {
+        "tags": ["messages"],
+        "parameters": [
+          { "name": "messageId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MessagePatchRequest" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Updated message" } }
+      },
+      "delete": {
+        "tags": ["messages"],
+        "parameters": [
+          { "name": "messageId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    },
+    "/api/onboarding": {
+      "get": {
+        "tags": ["onboarding"],
+        "security": [],
+        "responses": {
+          "200": { "description": "Public starter characters" }
+        }
+      },
+      "post": {
+        "tags": ["onboarding"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OnboardingPostRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "const": true },
+                    "chatId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/streak": {
+      "post": {
+        "tags": ["users"],
+        "summary": "Record daily login streak (idempotent per day)",
+        "responses": {
+          "200": {
+            "description": "Streak updated or unchanged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "const": true },
+                    "streak": { "type": "integer" },
+                    "changed": { "type": "boolean" },
+                    "isNewRecord": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/reports": {
+      "post": {
+        "tags": ["reports"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReportsPostRequest" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Report submitted" } }
+      }
+    },
+    "/api/openapi": {
+      "get": {
+        "tags": ["meta"],
+        "security": [],
+        "summary": "OpenAPI document",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": ["meta"],
+        "security": [],
+        "summary": "Liveness probe",
+        "responses": {
+          "200": {
+            "description": "Service OK",
+            "headers": { "x-request-id": { "$ref": "#/components/headers/RequestId" } },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "status", "timestamp"],
+                  "properties": {
+                    "success": { "const": true },
+                    "status": { "const": "ok" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cron/purge-rate-events": {
+      "get": {
+        "tags": ["meta"],
+        "security": [],
+        "summary": "Purge rate ledger rows (Vercel Cron; Bearer CRON_SECRET)",
+        "responses": {
+          "200": { "description": "Purge completed" },
+          "401": { "description": "Unauthorized" },
+          "503": { "description": "Cron not configured or purge failed" }
+        }
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "tags": ["users"],
+        "responses": {
+          "200": { "description": "Current user profile" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "patch": {
+        "tags": ["users"],
+        "summary": "Update profile (JSON or multipart)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": { "type": "string" },
+                  "bio": { "type": "string", "nullable": true },
+                  "avatarUrl": { "type": "string", "nullable": true }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": { "type": "string" },
+                  "bio": { "type": "string" },
+                  "avatar": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated user" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/personas": {
+      "get": {
+        "tags": ["personas"],
+        "responses": { "200": { "description": "User personas list" } }
+      },
+      "post": {
+        "tags": ["personas"],
+        "summary": "Create persona (multipart)",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "short_bio": { "type": "string" },
+                  "appearance": { "type": "string" },
+                  "personality": { "type": "string" },
+                  "avatar": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Created persona" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/personas/{id}": {
+      "get": {
+        "tags": ["personas"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Persona" }, "404": { "description": "Not found" } }
+      },
+      "patch": {
+        "tags": ["personas"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": { "schema": { "type": "object" } }
+          }
+        },
+        "responses": { "200": { "description": "Updated" }, "429": { "$ref": "#/components/responses/RateLimited" } }
+      },
+      "delete": {
+        "tags": ["personas"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    },
+    "/api/characters": {
+      "post": {
+        "tags": ["characters"],
+        "summary": "Create character (multipart)",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "avatar": { "type": "string", "format": "binary" },
+                  "isPublic": { "type": "string" },
+                  "forkedFromId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Created; body includes character id" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/characters/{id}": {
+      "patch": {
+        "tags": ["characters"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": { "schema": { "type": "object" } },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "isPublic": { "type": "boolean" } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Updated character" } }
+      },
+      "delete": {
+        "tags": ["characters"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    },
+    "/api/characters/{id}/fork": {
+      "post": {
+        "tags": ["characters"],
+        "summary": "Prepare fork payload from source character",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Fork draft fields" } }
+      }
+    },
+    "/api/characters/{id}/like": {
+      "post": {
+        "tags": ["characters"],
+        "summary": "Toggle like on public/readable character",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "liked + likesCount",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "const": true },
+                    "liked": { "type": "boolean" },
+                    "likesCount": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chats/{chatId}": {
+      "patch": {
+        "tags": ["chats"],
+        "parameters": [{ "name": "chatId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "personaId": { "type": "string", "nullable": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Updated chat metadata" } }
+      },
+      "delete": {
+        "tags": ["chats"],
+        "parameters": [{ "name": "chatId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Chat deleted" } }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "scenarioId": "nsfw-flirty",
+  "target": "assistant",
+  "mustNotContain": [
+    "as an ai",
+    "language model",
+    "content policy",
+    "i cannot assist",
+    "i can't assist"
+  ],
+  "mustMatchRegex": ["\\*[^*]+\\*"]
+}

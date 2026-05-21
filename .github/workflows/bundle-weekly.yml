@@ -1,0 +1,24 @@
+name: Bundle and perf (weekly)
+
+on:
+  schedule:
+    # Mondays 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  bundle-budgets:
+    name: build + bundle/perf checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Bundle budgets (requires .next from build)
+        run: npm run check:bundle
+      - name: Perf / migration checklist
+        run: npm run check:perf

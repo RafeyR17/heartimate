@@ -1,0 +1,10 @@
+{
+  "scenarioId": "nsfw-flirty",
+  "target": "prompt",
+  "mustContain": [
+    "adults-only uncensored platform",
+    "Explicit sexual content is fully allowed",
+    "Lyra"
+  ],
+  "mustNotContain": ["as an AI", "you are a language model"]
+}

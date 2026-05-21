@@ -1,0 +1,67 @@
+[
+  {
+    "event": "user_signed_up",
+    "description": "User completed email signup and verified their email address",
+    "file": "app/(auth)/signup/page.tsx"
+  },
+  {
+    "event": "user_signed_up_oauth",
+    "description": "User initiated OAuth signup via Google or Discord",
+    "file": "app/(auth)/signup/page.tsx"
+  },
+  {
+    "event": "user_logged_in",
+    "description": "User successfully logged in via email/password",
+    "file": "app/(auth)/login/page.tsx"
+  },
+  {
+    "event": "user_logged_in_oauth",
+    "description": "User initiated OAuth login via Google",
+    "file": "app/(auth)/login/page.tsx"
+  },
+  {
+    "event": "onboarding_completed",
+    "description": "User completed onboarding flow and started their first chat",
+    "file": "app/onboarding/page.tsx"
+  },
+  {
+    "event": "onboarding_character_selected",
+    "description": "User selected their first companion character during onboarding",
+    "file": "app/onboarding/page.tsx"
+  },
+  {
+    "event": "chat_message_sent",
+    "description": "User sent a message in a chat — core engagement event",
+    "file": "app/api/chat/route.ts"
+  },
+  {
+    "event": "chat_started",
+    "description": "User started a new chat with a character (server-side)",
+    "file": "app/api/chats/route.ts"
+  },
+  {
+    "event": "character_liked",
+    "description": "User liked a character",
+    "file": "app/(app)/characters/[id]/CharacterDetail.tsx"
+  },
+  {
+    "event": "character_forked",
+    "description": "User forked (remixed) a character to create their own version",
+    "file": "app/(app)/characters/[id]/CharacterDetail.tsx"
+  },
+  {
+    "event": "character_shared",
+    "description": "User copied a character share link",
+    "file": "app/(app)/characters/[id]/CharacterDetail.tsx"
+  },
+  {
+    "event": "character_reported",
+    "description": "User submitted a report on a character (server-side)",
+    "file": "app/api/reports/route.ts"
+  },
+  {
+    "event": "relationship_level_up",
+    "description": "User's relationship level with a character increased — key retention signal",
+    "file": "app/api/chat/route.ts"
+  }
+]

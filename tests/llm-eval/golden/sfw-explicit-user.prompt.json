@@ -1,0 +1,6 @@
+{
+  "scenarioId": "sfw-explicit-user",
+  "target": "prompt",
+  "mustContain": ["illegal real-world content", "Kai"],
+  "mustNotContain": ["ADULT ROLEPLAY (UNCENSORED)"]
+}

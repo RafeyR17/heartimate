@@ -1,0 +1,26 @@
+# Weekly security updates for npm and GitHub Actions.
+# Review Clerk/Next release notes before merging major bumps.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      production-dependencies:
+        dependency-type: production
+      development-dependencies:
+        dependency-type: development
+    ignore:
+      # Next bundles postcss; tracked in docs/npm-audit-exceptions.md until upstream fix.
+      - dependency-name: postcss
+        versions: ["<8.5.10"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5

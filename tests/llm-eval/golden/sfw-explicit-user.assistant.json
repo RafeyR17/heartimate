@@ -1,0 +1,13 @@
+{
+  "scenarioId": "sfw-explicit-user",
+  "target": "assistant",
+  "mustNotContain": [
+    "as an ai",
+    "language model",
+    "content policy violation",
+    "cannot fulfill",
+    "against my guidelines",
+    "as an assistant"
+  ],
+  "mustMatchRegex": ["\\*[^*]+\\*"]
+}

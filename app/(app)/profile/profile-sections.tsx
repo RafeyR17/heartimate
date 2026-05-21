@@ -1,0 +1,6 @@
+export { OverviewTab } from './sections/overview-tab'
+export { CharactersTab } from './sections/characters-tab'
+export { ChatsTab } from './sections/chats-tab'
+export { FavoritesTab } from './sections/favorites-tab'
+export { PersonasTab } from './sections/personas-tab'
+export { EditProfileModal } from './sections/edit-profile-modal'

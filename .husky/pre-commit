@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Optional: skip with HUSKY=0 git commit ...
+npx lint-staged

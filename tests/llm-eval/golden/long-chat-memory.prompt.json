@@ -1,0 +1,5 @@
+{
+  "scenarioId": "long-chat-memory",
+  "target": "prompt",
+  "mustContain": ["red scarf", "MEMORY", "Aria"]
+}
