@@ -18,8 +18,9 @@ import {
 import { useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import { Suspense, useEffect } from "react";
+import { LogoutButton } from "./LogoutButton";
 import { StreakWidget } from "./StreakWidget";
-import { useMobileNav } from "./MobileNavProvider";
+import { MOBILE_NAV_BACKDROP_CLASS, useMobileNav } from "./MobileNavProvider";
 import { cn } from "@/lib/utils";
 import { pickPersonaName, type SidebarChatItem } from "@/lib/app-types";
 
@@ -190,6 +191,8 @@ function SidebarPanel({
                 </div>
               </div>
             </Link>
+
+            <LogoutButton onNavigate={onNavigate} className="mt-2" />
           </>
         ) : (
           <p className="px-3 font-body text-[12px] text-white/35 leading-relaxed">
@@ -224,9 +227,17 @@ function SidebarContent({
     { label: "Home", href: "/home", icon: Home, isActive: pathname === "/home" },
     { label: "Discover", href: "/explore", icon: Compass, isActive: pathname === "/explore" && sort !== "trending" },
     { label: "Trending", href: "/explore?sort=trending", icon: TrendingUp, isActive: pathname === "/explore" && sort === "trending" },
-    { label: "Favorites", href: "/profile?tab=favorites", icon: Heart, isActive: pathname === "/profile" && searchParams.get("tab") === "favorites" },
+    { label: "Favorites", href: "/favorites", icon: Heart, isActive: pathname === "/favorites" || (pathname === "/profile" && searchParams.get("tab") === "favorites") },
     { label: "Personas", href: "/personas", icon: Sparkles, isActive: Boolean(pathname?.startsWith("/personas")) },
-    { label: "My Characters", href: "/profile?tab=characters", icon: User, isActive: pathname === "/profile" && searchParams.get("tab") === "characters" },
+    {
+      label: "My Characters",
+      href: "/characters",
+      icon: User,
+      isActive:
+        pathname === "/characters" ||
+        Boolean(pathname?.match(/^\/characters\/[^/]+\/edit$/)) ||
+        (pathname === "/profile" && searchParams.get("tab") === "characters"),
+    },
     { label: "Create", href: "/characters/create", icon: Plus, isActive: pathname === "/characters/create" },
   ];
 
@@ -281,10 +292,10 @@ function SidebarContent({
           <button
             type="button"
             aria-label="Close menu"
-            aria-hidden={!open}
             tabIndex={open ? 0 : -1}
             onClick={close}
             className={cn(
+              MOBILE_NAV_BACKDROP_CLASS,
               "md:hidden fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm transition-opacity duration-300",
               open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
             )}
@@ -292,9 +303,9 @@ function SidebarContent({
           <aside
             id="mobile-nav-drawer"
             role="dialog"
-            aria-modal="true"
+            aria-modal={open}
             aria-label="Navigation menu"
-            aria-hidden={!open}
+            hidden={!open}
             className={cn(
               "md:hidden fixed top-0 left-0 bottom-0 z-[56] w-[min(280px,85vw)] border-r border-white/10 shadow-2xl transition-transform duration-300 ease-out",
               open ? "translate-x-0" : "-translate-x-full pointer-events-none"

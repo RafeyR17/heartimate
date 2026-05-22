@@ -49,6 +49,7 @@ describe('POST /api/onboarding', () => {
     const res = await POST(
       jsonRequest('http://localhost/api/onboarding', {
         displayName: 'Ada',
+        personaId: 'persona-1',
         starterCharId: 'char-1',
       })
     )
@@ -61,6 +62,7 @@ describe('POST /api/onboarding', () => {
     const res = await POST(
       jsonRequest('http://localhost/api/onboarding', {
         displayName: '',
+        personaId: 'persona-1',
         starterCharId: 'char-1',
         isAdult: true,
       })
@@ -75,6 +77,7 @@ describe('POST /api/onboarding', () => {
     const res = await POST(
       jsonRequest('http://localhost/api/onboarding', {
         displayName: 'Ada',
+        personaId: 'persona-1',
         starterCharId: 'char-1',
         isAdult: false,
       })
@@ -89,6 +92,7 @@ describe('POST /api/onboarding', () => {
     const res = await POST(
       jsonRequest('http://localhost/api/onboarding', {
         displayName: 'Ada',
+        personaId: 'persona-1',
         starterCharId: 'char-1',
       })
     )
@@ -98,9 +102,47 @@ describe('POST /api/onboarding', () => {
     expect(json.error).toBeTruthy()
   })
 
+  it('returns 404 when persona is missing', async () => {
+    const supabase = createMockSupabaseClient({
+      from: (table) => {
+        if (table === 'personas') {
+          return createQueryChain(async () => ({ data: null, error: null }))
+        }
+        if (table === 'characters') {
+          return createQueryChain(async () => ({
+            data: {
+              id: 'char-1',
+              name: 'Lyra',
+              greeting: 'Hello',
+              is_public: true,
+            },
+            error: null,
+          }))
+        }
+        return createQueryChain(async () => ({ data: null, error: null }))
+      },
+    })
+    createAuthedDb.mockResolvedValue(mockAuthedDb({ supabase }))
+
+    const res = await POST(
+      jsonRequest('http://localhost/api/onboarding', {
+        displayName: 'Ada',
+        personaId: 'persona-missing',
+        starterCharId: 'char-1',
+        isAdult: true,
+      })
+    )
+    const { status, json } = await readJsonResponse(res)
+    expect(status).toBe(404)
+    expect(json.error).toMatch(/Persona/)
+  })
+
   it('returns 404 when starter is not public', async () => {
     const supabase = createMockSupabaseClient({
       from: (table) => {
+        if (table === 'personas') {
+          return createQueryChain(async () => ({ data: { id: 'persona-1' }, error: null }))
+        }
         if (table === 'characters') {
           return createQueryChain(async () => ({ data: null, error: null }))
         }
@@ -112,6 +154,7 @@ describe('POST /api/onboarding', () => {
     const res = await POST(
       jsonRequest('http://localhost/api/onboarding', {
         displayName: 'Ada',
+        personaId: 'persona-1',
         starterCharId: 'char-private',
         isAdult: true,
       })
@@ -124,6 +167,9 @@ describe('POST /api/onboarding', () => {
   it('creates chat for valid onboarding payload', async () => {
     const supabase = createMockSupabaseClient({
       from: (table) => {
+        if (table === 'personas') {
+          return createQueryChain(async () => ({ data: { id: 'persona-1' }, error: null }))
+        }
         if (table === 'characters') {
           return createQueryChain(async () => ({
             data: {
@@ -143,16 +189,20 @@ describe('POST /api/onboarding', () => {
         }
         return createQueryChain(async () => ({ data: null, error: null }))
       },
-      rpc: async () => ({
-        data: { chat_id: 'chat-new-1' },
-        error: null,
-      }),
+      rpc: async (_name, args) => {
+        expect(args).toMatchObject({ p_persona_id: 'persona-1' })
+        return {
+          data: { chat_id: 'chat-new-1' },
+          error: null,
+        }
+      },
     })
     createAuthedDb.mockResolvedValue(mockAuthedDb({ supabase }))
 
     const res = await POST(
       jsonRequest('http://localhost/api/onboarding', {
         displayName: 'Ada',
+        personaId: 'persona-1',
         starterCharId: 'char-1',
         isAdult: true,
       })

@@ -1,4 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import {
+  resolveOnboardingReveal,
+  resolveOnboardingTeaser,
+} from '@/lib/onboarding-copy'
 import { serverLog } from '@/lib/server-log'
 
 export type OnboardingStarter = {
@@ -10,22 +14,13 @@ export type OnboardingStarter = {
   msg: string
 }
 
-const FALLBACK_IMG =
-  '/images/characters/lyra.jpg'
+const FALLBACK_IMG = '/images/characters/lyra.jpg'
 
 function firstTag(tags: unknown): string {
   if (Array.isArray(tags) && tags.length > 0 && typeof tags[0] === 'string') {
     return tags[0].toUpperCase()
   }
   return 'ROMANCE'
-}
-
-function buildMessage(greeting: string, name: string): string {
-  const base = greeting.trim() || '*smiles* Hello, [name].'
-  if (base.includes('[name]')) {
-    return base.replace(/\[name\]/gi, name)
-  }
-  return `"${base}"`
 }
 
 export async function fetchOnboardingStarters(
@@ -45,20 +40,18 @@ export async function fetchOnboardingStarters(
   }
 
   return (data ?? []).map((row) => {
+    const id = row.id as string
+    const name = row.name as string
     const description = String(row.description ?? '').trim()
     const greeting = String(row.greeting ?? '').trim()
-    const teaser =
-      description.length > 0
-        ? description.slice(0, 80)
-        : greeting.slice(0, 80) || 'Say hello...'
 
     return {
-      id: row.id as string,
-      name: row.name as string,
+      id,
+      name,
       tag: firstTag(row.tags),
       img: (row.avatar_url as string | null) || FALLBACK_IMG,
-      teaser,
-      msg: buildMessage(greeting, '[name]'),
+      teaser: resolveOnboardingTeaser(id, name, description, greeting),
+      msg: resolveOnboardingReveal(id, name, greeting),
     }
   })
 }

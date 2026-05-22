@@ -8,6 +8,8 @@ import { capturePostHog } from "@/lib/posthog-browser";
 import { apiFetch } from "@/lib/api-client";
 import { setNewUserHint } from "@/lib/client-storage";
 import { useToast } from "@/components/ToastProvider";
+import { OnboardingPersonaStep } from "@/components/onboarding/OnboardingPersonaStep";
+import { OnboardingRevealStep } from "@/components/onboarding/OnboardingRevealStep";
 
 const KINKS = [
   "Romance", "Slow Burn", "Forbidden Love", "Childhood Friends", "Hurt/Comfort",
@@ -35,6 +37,8 @@ export default function OnboardingPage() {
   const [isEighteen, setIsEighteen] = useState(false);
   const [shakeConsent, setShakeConsent] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [personaId, setPersonaId] = useState<string | null>(null);
+  const [personaName, setPersonaName] = useState("");
   const [selectedChar, setSelectedChar] = useState<string | null>(null);
   const [starters, setStarters] = useState<OnboardingStarter[]>([]);
   const [startersLoading, setStartersLoading] = useState(true);
@@ -43,7 +47,9 @@ export default function OnboardingPage() {
     let cancelled = false;
     (async () => {
       try {
-        const result = await apiFetch<{ starters?: OnboardingStarter[] }>("/api/onboarding");
+        const result = await apiFetch<{ starters?: OnboardingStarter[] }>("/api/onboarding", {
+          cache: "no-store",
+        });
         if (
           !cancelled &&
           result.ok &&
@@ -65,48 +71,14 @@ export default function OnboardingPage() {
     };
   }, [toastError]);
 
-  // Step 5 states
-  const [phase, setPhase] = useState("A"); // A: black, B: bg fade in, C: content fade up, D: button fade in
-  const [typewriterText, setTypewriterText] = useState("");
   const [roseFlash, setRoseFlash] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [savingDisplayName, setSavingDisplayName] = useState(false);
 
-  useEffect(() => {
-    if (step !== 5) return;
-    const t1 = setTimeout(() => setPhase("B"), 300);
-    const t2 = setTimeout(() => setPhase("C"), 800);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [step]);
-
-  const typewriterSourceKey =
-    step === 5 && phase === "C"
-      ? `${selectedChar ?? ""}:${displayName}`
-      : "";
-
-  useEffect(() => {
-    if (!typewriterSourceKey) return;
-    const char = starters.find((c) => c.id === selectedChar);
-    if (!char) return;
-    const fullMsg = char.msg.replace(/\[name\]/g, displayName || "guest");
-
-    let i = 0;
-    const interval = setInterval(() => {
-      setTypewriterText(fullMsg.slice(0, i + 1));
-      i++;
-      if (i === fullMsg.length) {
-        clearInterval(interval);
-        setTimeout(() => setPhase("D"), 800);
-      }
-    }, 38);
-    return () => {
-      clearInterval(interval);
-      setTypewriterText("");
-    };
-  }, [typewriterSourceKey, selectedChar, displayName, starters]);
+  if (step >= 5 && !personaId) {
+    setStep(4);
+  }
 
   const handleOAuth = () => {
     if (!isLoaded) return;
@@ -117,13 +89,34 @@ export default function OnboardingPage() {
     });
   };
 
-  const handleStep2Next = () => {
+  const handleStep2Next = async () => {
     if (!isEighteen) {
       setShakeConsent(true);
       setTimeout(() => setShakeConsent(false), 500);
       return;
     }
-    if (displayName.trim()) setStep(3);
+    const trimmed = displayName.trim();
+    if (!trimmed) return;
+
+    setSavingDisplayName(true);
+    try {
+      const result = await apiFetch<{ user?: { display_name?: string } }>("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: trimmed }),
+      });
+      if (!result.ok) {
+        toastError("Could not save your name", result.error);
+        return;
+      }
+      const saved = result.data.user?.display_name?.trim();
+      if (saved) setDisplayName(saved);
+      setStep(3);
+    } catch {
+      toastError("Could not save your name", "Please try again.");
+    } finally {
+      setSavingDisplayName(false);
+    }
   };
 
   const toggleTag = (tag: string) => {
@@ -134,6 +127,11 @@ export default function OnboardingPage() {
   const selectedCharData = starters.find(c => c.id === selectedChar);
 
   const handleFinish = async () => {
+    if (!personaId) {
+      setSubmitError("Create your persona before continuing.");
+      setStep(4);
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError("");
     setRoseFlash(true);
@@ -145,6 +143,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           displayName,
           kinkPrefs: selectedTags,
+          personaId,
           starterCharId: selectedChar,
           characterName: selectedCharData?.name,
           isAdult: isEighteen
@@ -215,10 +214,10 @@ export default function OnboardingPage() {
       `}</style>
 
       {/* Tiny progress dot */}
-      {step < 5 && (
+      {step < 6 && (
         <div className="absolute top-8 right-8 z-50 flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-rose shadow-[0_0_8px_rgba(232,80,122,0.8)]" />
-          <span className="text-[10px] text-white/30 font-label tracking-[0.2em]">{step}/5</span>
+          <span className="text-[10px] text-white/30 font-label tracking-[0.2em]">{step}/6</span>
         </div>
       )}
 
@@ -277,7 +276,9 @@ export default function OnboardingPage() {
           value={displayName}
           maxLength={50}
           onChange={(e) => setDisplayName(e.target.value.slice(0, 50))}
-          onKeyDown={(e) => { if (e.key === 'Enter') handleStep2Next(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void handleStep2Next();
+          }}
           className="w-[360px] max-w-full bg-transparent border-none border-b-2 border-white/15 focus:border-rose focus:outline-none text-center text-white font-heading text-[36px] pb-2 transition-colors placeholder:text-white/20"
         />
 
@@ -300,10 +301,12 @@ export default function OnboardingPage() {
 
         <div className={`mt-16 transition-all duration-500 ${displayName.trim() && isEighteen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
           <button 
-            onClick={handleStep2Next}
-            className="px-12 py-4 bg-rose text-white rounded-full font-body font-medium text-[13px] tracking-[0.1em] uppercase hover:bg-rose/90 transition-all shadow-[0_0_20px_rgba(232,80,122,0.3)]"
+            type="button"
+            onClick={() => void handleStep2Next()}
+            disabled={savingDisplayName}
+            className="px-12 py-4 bg-rose text-white rounded-full font-body font-medium text-[13px] tracking-[0.1em] uppercase hover:bg-rose/90 transition-all shadow-[0_0_20px_rgba(232,80,122,0.3)] disabled:opacity-50"
           >
-            That's me →
+            {savingDisplayName ? "Saving…" : "That's me →"}
           </button>
         </div>
       </div>
@@ -351,13 +354,26 @@ export default function OnboardingPage() {
             disabled={selectedTags.length === 0}
             className="px-8 py-4 bg-rose text-white rounded-full font-body font-medium text-[13px] tracking-[0.1em] uppercase transition-all disabled:opacity-30 hover:bg-rose/90 shadow-[0_0_20px_rgba(232,80,122,0.2)] disabled:shadow-none"
           >
-            Show me who's waiting →
+            Create your persona →
           </button>
         </div>
       </div>
 
-      {/* STEP 4: CHOOSE YOUR OBSESSION */}
+      {/* STEP 4: CREATE PERSONA */}
       <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${getSlideClass(4)}`}>
+        <OnboardingPersonaStep
+          displayName={displayName}
+          onBack={() => setStep(3)}
+          onCreated={({ id, name }) => {
+            setPersonaId(id);
+            setPersonaName(name);
+            setStep(5);
+          }}
+        />
+      </div>
+
+      {/* STEP 5: CHOOSE YOUR OBSESSION */}
+      <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${getSlideClass(5)}`}>
         <div className="w-full flex flex-col items-center pt-10">
           <span className="font-label text-rose text-[11px] tracking-[0.15em] mb-4 block uppercase text-center">// YOUR FIRST OBSESSION</span>
           <h2 className="font-heading italic text-4xl md:text-5xl text-rose mb-1 text-center">Someone has been waiting</h2>
@@ -406,9 +422,7 @@ export default function OnboardingPage() {
                       character_name: selectedCharData.name,
                       character_tag: selectedCharData.tag,
                     });
-                    setPhase("A");
-                    setTypewriterText("");
-                    setStep(5);
+                    setStep(6);
                   }
                 }}
                 className="px-10 py-4 bg-rose text-white rounded-full font-heading italic text-[18px] transition-all hover:bg-rose/90 shadow-[0_0_20px_rgba(232,80,122,0.3)] flex items-center gap-2"
@@ -420,47 +434,20 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      {/* STEP 5: THE REVEAL */}
-      <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-[800ms] ease-out ${getSlideClass(5)}`}>
-        {/* Phase B: Image Fade */}
-        <div className={`absolute inset-0 transition-opacity duration-[1000ms] -z-20 ${phase === "A" ? "opacity-0" : "opacity-100"}`}>
-          {selectedCharData && (
-            <>
-              <Image src={selectedCharData.img} alt="Background" fill className="object-cover object-top" />
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(8,6,8,0.2), rgba(8,6,8,0.85))' }} />
-            </>
-          )}
-        </div>
-
-        {/* Phase C: Content Fade Up */}
-        <div className={`w-full max-w-[520px] px-6 text-center flex flex-col items-center justify-center transition-all duration-[1000ms] ease-out ${phase === "A" || phase === "B" ? "opacity-0 translate-y-12" : "opacity-100 translate-y-0"}`}>
-          <span className="font-label text-[11px] tracking-[0.15em] mb-4 uppercase text-white/40">// THEY'VE BEEN WAITING</span>
-          <h2 className="font-heading italic text-[48px] text-rose mb-12">{selectedCharData?.name}</h2>
-          
-          <div className="min-h-[160px] flex items-start justify-center">
-            <p className="font-heading italic text-[18px] text-[rgba(255,255,255,0.85)] leading-[1.8] text-center">
-              {typewriterText}
-            </p>
-          </div>
-          
-          {/* Phase D: Button */}
-          <div className={`mt-12 transition-opacity duration-1000 ${phase === "D" ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-            {submitError && (
-              <p className="mb-4 text-center font-body text-[13px] text-[#e8507a]">{submitError}</p>
-            )}
-            <button 
-              onClick={handleFinish}
-              disabled={isSubmitting}
-              className="px-10 py-4 bg-rose text-white rounded-full font-body font-medium text-[13px] tracking-[0.1em] uppercase transition-all hover:bg-rose/90 shadow-[0_0_30px_rgba(232,80,122,0.4)] disabled:opacity-50"
-            >
-              {isSubmitting ? "Connecting..." : "Begin your story →"}
-            </button>
-          </div>
-        </div>
-        
-        {/* Rose Flash */}
-        <div className={`absolute inset-0 bg-rose transition-opacity duration-[600ms] pointer-events-none z-50 ${roseFlash ? 'opacity-20' : 'opacity-0'}`} />
-      </div>
+      {/* STEP 6: THE REVEAL */}
+      {step === 6 && selectedCharData && (
+        <OnboardingRevealStep
+          key={selectedCharData.id}
+          character={selectedCharData}
+          personaName={personaName}
+          displayName={displayName}
+          slideClassName={getSlideClass(6)}
+          roseFlash={roseFlash}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+          onFinish={() => void handleFinish()}
+        />
+      )}
 
     </div>
   );

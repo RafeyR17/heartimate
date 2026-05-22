@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Product routes (Heartimate)
 
-**App pages that exist:** `/`, `/login`, `/signup`, `/onboarding`, `/home`, `/explore`, `/characters/[id]`, `/characters/create`, `/characters/[id]/edit`, `/chat/[chatId]`, `/profile` (tabs via `?tab=`), `/personas`, `/personas/create`, `/personas/[id]/edit`, `/sso-callback`, `/terms`, `/privacy`.
+**App pages that exist:** `/`, `/login`, `/signup`, `/onboarding`, `/home`, `/explore`, `/favorites`, `/characters` (owned list), `/characters/[id]`, `/characters/create`, `/characters/[id]/edit`, `/chat/[chatId]`, `/profile` (tabs via `?tab=`), `/personas`, `/personas/create`, `/personas/[id]/edit`, `/sso-callback`, `/terms`, `/privacy`.
 
 **Not in scope — do not implement or audit as missing features:**
 - `/dashboard` (use `/home` and `/profile` instead)

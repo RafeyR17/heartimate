@@ -32,7 +32,7 @@ Apply migrations in filename order (`20240518_*` → `20240533_*`) on a fresh pr
 1. **Clerk:** Create a JWT template named `supabase` (or set `CLERK_SUPABASE_JWT_TEMPLATE`). Claims must include `sub` = Clerk user id (default).
 2. **Supabase:** Dashboard → Authentication → Third-Party Auth → add **Clerk** (issuer matches your Clerk instance).
 3. **App:** `createAuthedDb()` issues requests with Clerk JWT on the **anon** key (`supabase` client). RLS enforces ownership even if a route omits `.eq('user_id', …)`.
-4. **Service role:** `getServiceRoleClient()` in `lib/service-role.ts` — only for `getOrCreateUser`, rate ledgers, and idempotency RPCs. Never use for routine CRUD.
+4. **Service role:** `getServiceRoleClient()` in `lib/service-role.ts` — `getOrCreateUser`, `uploadPreparedAvatar` (storage), rate ledgers, and idempotency RPCs. Never use for routine table CRUD.
 5. **Local dev without JWT:** `SUPABASE_RLS_BYPASS=true` in `.env.local` (non-production only) falls back to service role for `supabase` — logs a warning.
 
 ## Row level security (effective after `20240531`)

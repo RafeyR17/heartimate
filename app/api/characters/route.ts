@@ -4,8 +4,8 @@ import { revalidateExploreCatalog } from '@/lib/cache-tags'
 import { apiError, apiSuccess } from '@/lib/api'
 import { validateCharacterFormInput } from '@/lib/api-validation'
 import { runApiHandler } from '@/lib/observability/api-route'
+import { uploadPreparedAvatar } from '@/lib/avatar-storage'
 import { processAvatarUpload } from '@/lib/upload'
-import { avatarStorageUploadOptions } from '@/lib/storage-upload'
 
 export const POST = withAuthedApi(async (authed, req: Request) => {
   return runApiHandler('POST /api/characters', req, async ({ req: request, log, setUserId }) => {
@@ -57,21 +57,16 @@ export const POST = withAuthedApi(async (authed, req: Request) => {
         return apiError(prepared.error, 400)
       }
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(
-          prepared.fileName,
-          prepared.buffer,
-          avatarStorageUploadOptions(prepared.contentType, { duplex: 'half' })
-        )
-
-      if (uploadError) {
-        log.error('characters.upload_failed', { error: uploadError.message })
+      const uploaded = await uploadPreparedAvatar(
+        prepared.fileName,
+        prepared.buffer,
+        prepared.contentType
+      )
+      if (!uploaded.ok) {
+        log.error('characters.upload_failed', { error: uploaded.error })
         return apiError('Failed to upload avatar', 500)
       }
-
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(prepared.fileName)
-      avatarUrl = urlData.publicUrl
+      avatarUrl = uploaded.publicUrl
     }
 
     const insertRow: Record<string, unknown> = {

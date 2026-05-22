@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import PersonaSelectModal from '@/components/PersonaSelectModal'
-import type { Persona } from '@/lib/personas'
+import type { Persona } from '@/lib/persona-constants'
 import type { ChatClientProps } from './chat-types'
 import { ChatSessionProvider } from './ChatSessionContext'
 import { useChatStream } from './useChatStream'

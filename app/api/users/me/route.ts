@@ -4,8 +4,8 @@ import { apiError, apiSuccess } from '@/lib/api'
 import { parseJsonBody, usersMePatchJsonSchema } from '@/lib/api-schemas'
 import { MAX_USER_BIO_LENGTH } from '@/lib/api-validation'
 import { runApiHandler } from '@/lib/observability/api-route'
+import { uploadPreparedAvatar } from '@/lib/avatar-storage'
 import { processAvatarUpload } from '@/lib/upload'
-import { avatarStorageUploadOptions } from '@/lib/storage-upload'
 
 export const GET = withAuthedApi(async (authed, req: Request) => {
   return runApiHandler('GET /api/users/me', req, async ({ log, setUserId }) => {
@@ -76,21 +76,17 @@ export const PATCH = withAuthedApi(async (authed, req: Request) => {
         return apiError(prepared.error, 400)
       }
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(
-          prepared.fileName,
-          prepared.buffer,
-          avatarStorageUploadOptions(prepared.contentType, { upsert: true })
-        )
-
-      if (uploadError) {
-        log.error('users.me.upload_failed', { error: uploadError.message })
+      const uploaded = await uploadPreparedAvatar(
+        prepared.fileName,
+        prepared.buffer,
+        prepared.contentType,
+        { upsert: true }
+      )
+      if (!uploaded.ok) {
+        log.error('users.me.upload_failed', { error: uploaded.error })
         return apiError('Failed to upload avatar', 500)
       }
-
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(prepared.fileName)
-      updates.avatar_url = urlData.publicUrl
+      updates.avatar_url = uploaded.publicUrl
     } else if (avatarUrl !== undefined) {
       if (avatarUrl) {
         try {

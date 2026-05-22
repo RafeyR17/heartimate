@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server'
  *
  * **Allowed (request path):**
  * - `getOrCreateUser` — first insert before a JWT-backed user row exists
+ * - `uploadPreparedAvatar` — `avatars` storage bucket (after route auth)
  * - `try_acquire_chat_rate_slot` — chat rate ledger (`chat_rate_events`)
  * - `try_acquire_api_rate_slot` — write API rate ledger (`api_rate_events`)
  * - Chat idempotency RPCs — `claim_*`, `complete_*`, `fail_*` on `chat_idempotent_requests`

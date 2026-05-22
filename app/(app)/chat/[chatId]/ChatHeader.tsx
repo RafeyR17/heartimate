@@ -18,6 +18,7 @@ import { AvatarImage } from '@/components/ui/avatar-image'
 import { useToast } from '@/components/ToastProvider'
 import { AccessibleDialog } from '@/components/AccessibleDialog'
 import { iconTouchClass } from '@/lib/touch-targets'
+import { resolveChatGreetingName } from '@/lib/chat-greeting-name'
 import { DEFAULT_PERSONA_AVATAR } from './chat-types'
 import { useChatSession } from './ChatSessionContext'
 
@@ -45,6 +46,10 @@ export default function ChatHeader() {
   const [confirmDeleteChatOpen, setConfirmDeleteChatOpen] = useState(false)
 
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const playerName = resolveChatGreetingName({
+    userDisplayName,
+    personaName: persona?.name,
+  })
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -145,147 +150,152 @@ export default function ChatHeader() {
 
   return (
     <>
-      <header className="h-14 md:min-h-[60px] bg-[rgba(8,6,8,0.9)] backdrop-blur-[20px] border-b border-[rgba(255,255,255,0.06)] px-3 md:px-4 py-2 flex-shrink-0 flex items-center justify-between z-20 gap-2 safe-top">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+      <header className="min-h-[4.75rem] sm:min-h-[5rem] md:min-h-[4.5rem] bg-[rgba(8,6,8,0.92)] backdrop-blur-[20px] border-b border-[rgba(255,255,255,0.06)] px-3 sm:px-4 md:px-5 py-3 flex-shrink-0 z-20 safe-top">
+        <div className="flex items-start gap-3 w-full">
           <button
             type="button"
             onClick={() => router.push('/home')}
             aria-label="Back to home"
-            className={`${iconTouchClass} text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex-shrink-0 -ml-2`}
+            className={`${iconTouchClass} -ml-1 mt-0.5 text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex-shrink-0`}
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={22} />
           </button>
 
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="relative w-[36px] h-[36px] rounded-full overflow-hidden border border-[#e8507a]/30 bg-gradient-to-br from-[#1a0a20] to-[#2d1040] flex-shrink-0">
-              {character.avatar_url ? (
-                <AvatarImage src={character.avatar_url} className="object-cover object-[center_top]" alt="" fill sizes="36px" />
-              ) : (
-                <span className="text-[#e8507a] font-heading italic text-xs flex items-center justify-center h-full">AI</span>
-              )}
-            </div>
-            <div className="min-w-0">
-              <span className="font-semibold text-[14px] leading-tight text-white truncate block">{chatTitle}</span>
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className="w-[5px] h-[5px] rounded-full bg-[#22c55e] animate-pulse flex-shrink-0" />
-                <span className="text-[10px] text-[rgba(255,255,255,0.4)]">Online</span>
-              </div>
+          <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden border border-[#e8507a]/30 bg-gradient-to-br from-[#1a0a20] to-[#2d1040] flex-shrink-0">
+            {character.avatar_url ? (
+              <AvatarImage src={character.avatar_url} className="object-cover object-[center_top]" alt="" fill sizes="48px" />
+            ) : (
+              <span className="text-[#e8507a] font-heading italic text-sm flex items-center justify-center h-full">AI</span>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h1 className="font-semibold text-[15px] sm:text-[16px] leading-snug text-white truncate pr-1">
+              {chatTitle}
+            </h1>
+            <div className="flex items-center gap-2.5 mt-2 min-w-0">
+              <span
+                className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse flex-shrink-0"
+                title="Online"
+                aria-hidden
+              />
               <button
                 type="button"
                 onClick={onToggleAffectionPanel}
                 aria-pressed={showAffectionPanel}
-                className="mt-1 inline-flex items-center gap-1 rounded-full px-3 min-h-[44px] text-[10px] uppercase tracking-[0.1em]"
-                style={{ background: `${relInfo.color}20`, color: relInfo.color }}
+                aria-label={`Relationship: ${relInfo.label}. Tap for details.`}
+                className="rounded-full px-2.5 py-1 text-[10px] font-label uppercase tracking-[0.12em] shrink-0"
+                style={{ background: `${relInfo.color}18`, color: relInfo.color }}
               >
-                ● {relInfo.label}
+                {relInfo.label}
               </button>
             </div>
           </div>
 
-          <span className="text-white/20 text-lg flex-shrink-0 hidden sm:inline px-1">×</span>
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 pt-0.5">
+            <button
+              type="button"
+              onClick={onOpenPersonaModal}
+              aria-label={`Switch persona. Current: ${playerName}`}
+              className="hidden lg:flex items-center gap-2.5 min-w-0 group cursor-pointer rounded-xl hover:bg-white/5 px-2 py-1 transition-colors min-h-[44px]"
+              title="Switch persona"
+            >
+              <div className="relative w-10 h-10 rounded-full overflow-hidden border border-white/20 flex-shrink-0 group-hover:border-[#e8507a]/50 transition-colors">
+                {persona?.avatar_url ? (
+                  <AvatarImage src={persona.avatar_url} className="object-cover" alt="" fill sizes="40px" />
+                ) : (
+                  <AvatarImage src={DEFAULT_PERSONA_AVATAR} className="object-cover opacity-70" alt="" fill sizes="40px" />
+                )}
+              </div>
+              <span className="text-[14px] text-white/85 truncate max-w-[120px] group-hover:text-white">
+                {playerName}
+              </span>
+            </button>
 
-          <button
-            type="button"
-            onClick={onOpenPersonaModal}
-            aria-label={`Switch persona. Current: ${persona?.name || userDisplayName}`}
-            className="flex items-center gap-2 min-w-0 group cursor-pointer rounded-lg hover:bg-white/5 px-1 py-0.5 transition-colors min-h-[44px]"
-            title="Switch persona"
-          >
-            <div className="relative w-[32px] h-[32px] rounded-full overflow-hidden border border-white/20 flex-shrink-0 group-hover:border-[#e8507a]/50 transition-colors">
-              {persona?.avatar_url ? (
-                <AvatarImage src={persona.avatar_url} className="object-cover" alt="" fill sizes="32px" />
-              ) : (
-                <AvatarImage src={DEFAULT_PERSONA_AVATAR} className="object-cover opacity-70" alt="" fill sizes="32px" />
+            <div ref={dropdownRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setShowDropdown(!showDropdown)}
+                aria-label="Chat menu"
+                aria-expanded={showDropdown}
+                aria-haspopup="menu"
+                className={`${iconTouchClass} text-white/50 hover:text-white rounded-full hover:bg-white/5 transition-all`}
+              >
+                <MoreVertical size={20} />
+              </button>
+
+              {showDropdown && (
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-2 w-52 bg-[#120d14] border border-[rgba(255,255,255,0.1)] rounded-[12px] p-1.5 shadow-2xl z-30 animate-in fade-in slide-in-from-top-2 duration-200"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRenameDraft(chatTitle)
+                      setShowRenameModal(true)
+                      setShowDropdown(false)
+                    }}
+                    className="w-full text-left px-3 min-h-[44px] flex items-center text-[13px] hover:bg-white/5 rounded-lg text-white/80"
+                  >
+                    Rename chat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDropdown(false)
+                      onOpenPersonaModal()
+                    }}
+                    className="w-full text-left px-3 min-h-[44px] flex items-center gap-2 text-[13px] hover:bg-white/5 rounded-lg text-white/80"
+                  >
+                    <User size={16} className="text-white/40" />
+                    Switch persona
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDropdown(false)
+                      router.push(`/characters/${character.id}`)
+                    }}
+                    className="w-full text-left px-3 min-h-[44px] flex items-center gap-2 text-[13px] hover:bg-white/5 rounded-lg text-white/80"
+                  >
+                    <User size={16} className="text-white/40" />
+                    View character
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNewChat}
+                    className="w-full text-left px-3 min-h-[44px] flex items-center gap-2 text-[13px] hover:bg-white/5 rounded-lg text-white/80"
+                  >
+                    <Plus size={16} className="text-white/40" />
+                    New chat
+                  </button>
+                  <div className="h-[1px] bg-white/5 my-1" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDropdown(false)
+                      setConfirmClearOpen(true)
+                    }}
+                    className="w-full text-left px-3 min-h-[44px] flex items-center gap-2 text-[13px] hover:bg-[#ff4444]/10 rounded-lg text-[#ff4444]"
+                  >
+                    <Trash2 size={16} />
+                    Clear chat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDropdown(false)
+                      setConfirmDeleteChatOpen(true)
+                    }}
+                    className="w-full text-left px-3 min-h-[44px] flex items-center text-[13px] hover:bg-white/5 rounded-lg text-red-400"
+                  >
+                    Delete chat
+                  </button>
+                </div>
               )}
             </div>
-            <div className="min-w-0 hidden sm:block text-left">
-              <span className="text-[10px] text-[#e8507a] font-label uppercase tracking-wider block">You</span>
-              <span className="text-[13px] text-white/80 truncate block group-hover:text-white">
-                {persona?.name || userDisplayName}
-              </span>
-            </div>
-          </button>
-        </div>
-
-        <div ref={dropdownRef} className="relative">
-          <button
-            type="button"
-            onClick={() => setShowDropdown(!showDropdown)}
-            aria-label="Chat menu"
-            aria-expanded={showDropdown}
-            aria-haspopup="menu"
-            className={`${iconTouchClass} text-white/50 hover:text-white rounded-full hover:bg-white/5 transition-all`}
-          >
-            <MoreVertical size={20} />
-          </button>
-
-          {showDropdown && (
-            <div className="absolute right-0 mt-2 w-52 bg-[#120d14] border border-[rgba(255,255,255,0.1)] rounded-[12px] p-1.5 shadow-2xl z-30 animate-in fade-in slide-in-from-top-2 duration-200">
-              <button
-                type="button"
-                onClick={() => {
-                  setRenameDraft(chatTitle)
-                  setShowRenameModal(true)
-                  setShowDropdown(false)
-                }}
-                className="w-full text-left px-3 min-h-[44px] flex items-center text-[13px] hover:bg-white/5 rounded-lg text-white/80"
-              >
-                Rename chat
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDropdown(false)
-                  onOpenPersonaModal()
-                }}
-                className="w-full text-left px-3 min-h-[44px] flex items-center gap-2 text-[13px] hover:bg-white/5 rounded-lg text-white/80"
-              >
-                <User size={16} className="text-white/40" />
-                Switch persona
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDropdown(false)
-                  router.push(`/characters/${character.id}`)
-                }}
-                className="w-full text-left px-3 min-h-[44px] flex items-center gap-2 text-[13px] hover:bg-white/5 rounded-lg text-white/80"
-              >
-                <User size={16} className="text-white/40" />
-                View character
-              </button>
-              <button
-                type="button"
-                onClick={handleNewChat}
-                className="w-full text-left px-3 min-h-[44px] flex items-center gap-2 text-[13px] hover:bg-white/5 rounded-lg text-white/80"
-              >
-                <Plus size={16} className="text-white/40" />
-                New chat
-              </button>
-              <div className="h-[1px] bg-white/5 my-1" />
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDropdown(false)
-                  setConfirmClearOpen(true)
-                }}
-                className="w-full text-left px-3 min-h-[44px] flex items-center gap-2 text-[13px] hover:bg-[#ff4444]/10 rounded-lg text-[#ff4444]"
-              >
-                <Trash2 size={16} />
-                Clear chat
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDropdown(false)
-                  setConfirmDeleteChatOpen(true)
-                }}
-                className="w-full text-left px-3 min-h-[44px] flex items-center text-[13px] hover:bg-white/5 rounded-lg text-red-400"
-              >
-                Delete chat
-              </button>
-            </div>
-          )}
+          </div>
         </div>
       </header>
 

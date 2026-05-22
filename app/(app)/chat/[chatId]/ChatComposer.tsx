@@ -51,7 +51,7 @@ export default function ChatComposer() {
       className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/[0.08] bg-[rgba(8,6,8,0.95)] backdrop-blur-[20px] transition-transform duration-75 md:relative md:transform-none md:flex-shrink-0"
       style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}
     >
-      <div className="max-w-4xl mx-auto flex items-end gap-2 px-3 py-2 md:p-4">
+      <div className="w-full flex items-end gap-2 px-2 py-2 sm:px-3 md:max-w-4xl md:mx-auto md:p-4">
         <label htmlFor="chat-composer-input" className="sr-only">
           Message to {character.name}
         </label>

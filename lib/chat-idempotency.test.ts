@@ -5,6 +5,7 @@ import { claimChatIdempotency } from '@/lib/chat-idempotency'
 
 describe('claimChatIdempotency', () => {
   it('fails closed when claim RPC errors', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
     vi.mocked(getServiceRoleClient).mockReturnValueOnce(
       createMockSupabaseClient({
         rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'db down' } }),
@@ -15,6 +16,48 @@ describe('claimChatIdempotency', () => {
     if (result.action === 'unavailable') {
       expect(result.response.status).toBe(503)
     }
+    vi.unstubAllEnvs()
+  })
+
+  it('proceeds in development when claim RPC is missing (migration not applied)', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.mocked(getServiceRoleClient).mockReturnValueOnce(
+      createMockSupabaseClient({
+        rpc: vi.fn().mockResolvedValue({
+          data: null,
+          error: {
+            code: 'PGRST202',
+            message: 'Could not find the function public.claim_chat_idempotency',
+          },
+        }),
+      })
+    )
+    const result = await claimChatIdempotency('user-1', 'chat-1', 'idem-key-12345678')
+    expect(result.action).toBe('proceed')
+    vi.unstubAllEnvs()
+  })
+
+  it('returns migration hint in production when claim RPC is missing', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.mocked(getServiceRoleClient).mockReturnValueOnce(
+      createMockSupabaseClient({
+        rpc: vi.fn().mockResolvedValue({
+          data: null,
+          error: {
+            code: 'PGRST202',
+            message: 'Could not find the function public.claim_chat_idempotency',
+          },
+        }),
+      })
+    )
+    const result = await claimChatIdempotency('user-1', 'chat-1', 'idem-key-12345678')
+    expect(result.action).toBe('unavailable')
+    if (result.action === 'unavailable') {
+      expect(result.response.status).toBe(503)
+      const json = (await result.response.json()) as { error?: string }
+      expect(json.error).toMatch(/20240530_chat_idempotency/)
+    }
+    vi.unstubAllEnvs()
   })
 
   it('fails closed when replay has no cached body', async () => {

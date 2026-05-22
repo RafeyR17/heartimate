@@ -46,6 +46,7 @@ export const onboardingPostSchema = z.object({
     .max(MAX_ONBOARDING_KINK_PREFS)
     .optional()
     .default([]),
+  personaId: idField,
   starterCharId: idField,
   characterName: z.string().trim().max(MAX_CHARACTER_NAME_LENGTH).optional(),
   isAdult: z.boolean().refine(val => val === true, "Must be 18 or older"),

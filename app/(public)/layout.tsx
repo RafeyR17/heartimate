@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { auth } from '@clerk/nextjs/server'
 import { AppShellFromAuth } from '@/components/AppShell'
+import { isClerkConfigured } from '@/lib/runtime-env'
 import { PublicNav, publicGuestBottomInsetClass, publicNavTopInsetClass } from '@/components/PublicNav'
 import { PublicNavShell } from '@/components/PublicNavShell'
 import { MobileNavProvider } from '@/components/MobileNavProvider'
@@ -11,7 +12,7 @@ export default async function PublicLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { userId } = await auth()
+  const userId = isClerkConfigured() ? (await auth()).userId : null
 
   if (userId) {
     return <AppShellFromAuth>{children}</AppShellFromAuth>

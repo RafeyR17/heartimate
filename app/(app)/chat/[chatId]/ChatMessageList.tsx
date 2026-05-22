@@ -155,7 +155,7 @@ export default function ChatMessageList() {
     <>
       <main
         ref={mainScrollRef}
-        className="flex-1 overflow-y-auto px-3 py-4 md:px-12 md:p-5 pb-[calc(var(--chat-overlay-bottom,72px)+env(safe-area-inset-bottom))] md:pb-5 flex flex-col gap-2 md:gap-3 scroll-container hide-scrollbar"
+        className="flex-1 overflow-y-auto px-2 py-4 sm:px-3 md:px-12 md:p-5 pb-[calc(var(--chat-overlay-bottom,72px)+env(safe-area-inset-bottom))] md:pb-5 flex flex-col gap-2 md:gap-3 scroll-container hide-scrollbar"
       >
         {isEmptyChat && (
           <ChatEmptyState character={character} isStreaming={isStreaming} sendMessage={sendMessage} />
@@ -184,7 +184,7 @@ export default function ChatMessageList() {
           ))}
 
         {isStreaming && streamingContent && (
-          <div className="max-w-[85%] md:max-w-[75%] self-start flex gap-3">
+          <div className="w-full max-w-full sm:max-w-[92%] md:max-w-[75%] self-start flex gap-2 sm:gap-3 min-w-0">
             <div className="relative w-[32px] h-[32px] rounded-full overflow-hidden border border-[#e8507a]/20 flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#1a0a20] to-[#2d1040]">
               {character.avatar_url ? (
                 <AvatarImage
@@ -199,7 +199,7 @@ export default function ChatMessageList() {
               )}
             </div>
             <div
-              className={`bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)] rounded-[4px_16px_16px_16px] p-[14px_16px] font-body text-[14px] relative ${specialStream ? 'special-bubble' : ''}`}
+              className={`flex-1 min-w-0 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)] rounded-[4px_16px_16px_16px] p-[14px_16px] font-body text-[14px] relative ${specialStream ? 'special-bubble' : ''}`}
             >
               <p className="whitespace-pre-wrap break-words inline">{formatMessage(streamingContent)}</p>
               <span className="w-[2px] h-[14px] bg-[#e8507a] inline-block ml-1 align-middle animate-blink" />
@@ -208,9 +208,9 @@ export default function ChatMessageList() {
         )}
 
         {showTypingUi && (
-          <div className="max-w-[85%] md:max-w-[75%] self-start flex gap-3">
+          <div className="w-full max-w-full sm:max-w-[92%] md:max-w-[75%] self-start flex gap-2 sm:gap-3 min-w-0">
             <div className="w-[32px] h-[32px] rounded-full overflow-hidden border border-[#e8507a]/20 flex-shrink-0" />
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-[11px] italic text-white/40 mb-1">{character.name} is typing...</p>
               <div className="bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)] rounded-[4px_16px_16px_16px] p-[14px_22px] flex items-center gap-1.5 shadow-md">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#e8507a] dot-1" />

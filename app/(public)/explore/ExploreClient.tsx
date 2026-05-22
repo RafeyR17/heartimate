@@ -4,8 +4,17 @@ import React, { useState, useEffect, useCallback, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, X, Heart, MessageSquare, Compass, ChevronDown, Sparkles } from "lucide-react";
+import { Search, X, Heart, MessageSquare, Compass, Sparkles } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+import { DarkSelect } from "@/components/ui/dark-select";
+
+const EXPLORE_SORT_OPTIONS = [
+  { value: "trending", label: "🔥 Trending" },
+  { value: "likes", label: "❤️ Most Liked" },
+  { value: "chats", label: "💬 Most Chatted" },
+  { value: "newest", label: "✨ Newest" },
+  { value: "random", label: "🎲 Random" },
+] as const;
 
 // Curated luxury tag lists
 const TAGS = [
@@ -219,20 +228,14 @@ export default function ExploreClient({
             )}
           </div>
 
-          <div className="relative min-w-[160px]">
-            <select
-              value={sortOption}
-              onChange={(e) => handleSortChange(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-10 text-[13px] text-white/80 focus:outline-none focus:border-rose/40 transition-colors font-body appearance-none cursor-pointer hover:bg-white/10"
-            >
-              <option value="trending" className="bg-[#0c080d]">🔥 Trending</option>
-              <option value="likes" className="bg-[#0c080d]">❤️ Most Liked</option>
-              <option value="chats" className="bg-[#0c080d]">💬 Most Chatted</option>
-              <option value="newest" className="bg-[#0c080d]">✨ Newest</option>
-              <option value="random" className="bg-[#0c080d]">🎲 Random</option>
-            </select>
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
-          </div>
+          <DarkSelect
+            value={sortOption}
+            onChange={handleSortChange}
+            options={EXPLORE_SORT_OPTIONS}
+            aria-label="Sort characters"
+            className="min-w-[160px]"
+            triggerClassName="rounded-xl border-white/10 bg-white/5 py-3 hover:bg-white/10"
+          />
         </div>
 
         {/* Category horizontal scrolling filters */}

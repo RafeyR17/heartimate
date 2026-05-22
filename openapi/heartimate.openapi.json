@@ -112,12 +112,14 @@
       },
       "OnboardingPostRequest": {
         "type": "object",
-        "required": ["displayName", "starterCharId"],
+        "required": ["displayName", "personaId", "starterCharId", "isAdult"],
         "properties": {
           "displayName": { "type": "string", "maxLength": 50 },
           "kinkPrefs": { "type": "array", "items": { "type": "string" } },
+          "personaId": { "type": "string" },
           "starterCharId": { "type": "string" },
-          "characterName": { "type": "string", "maxLength": 80 }
+          "characterName": { "type": "string", "maxLength": 80 },
+          "isAdult": { "type": "boolean", "const": true }
         }
       },
       "ReportsPostRequest": {

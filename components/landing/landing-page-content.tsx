@@ -9,7 +9,6 @@ import { publicGuestBottomInsetClass } from "@/components/PublicNav";
 import { PublicNavShell } from "@/components/PublicNavShell";
 import { SiteFooter } from "@/components/legal/site-footer";
 import { HeroTypewriter } from "@/components/landing/hero-typewriter";
-import { HorizontalCarousel } from "@/components/ui/horizontal-carousel";
 import {
   CHARACTER_KAI_IMAGE,
   HERO_BG_IMAGE,
@@ -44,18 +43,21 @@ export function LandingPageContent() {
       </Suspense>
 
       {/* HERO SECTION */}
-      <section className="relative min-h-[100svh] flex items-center justify-center pt-14 md:pt-20 px-4 md:px-6 overflow-hidden">
-        <Image
-          src={HERO_BG_IMAGE}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-center -z-20"
-        />
-        <div className="absolute inset-0 bg-bg/50 pointer-events-none z-0" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-rose/15 rounded-full blur-[150px] pointer-events-none z-0" />
-        <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-purple-900/15 rounded-full blur-[150px] pointer-events-none z-0" />
+      <section className="relative min-h-[100svh] flex items-center justify-center pt-14 md:pt-20 px-4 md:px-6 overflow-hidden isolate">
+        <div className="absolute inset-0 z-0" aria-hidden>
+          <Image
+            src={HERO_BG_IMAGE}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center"
+          />
+        </div>
+        <div className="absolute inset-0 bg-bg/55 pointer-events-none z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-bg/80 via-bg/30 to-bg/90 pointer-events-none z-[1]" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-rose/10 rounded-full blur-[150px] pointer-events-none z-[1]" />
+        <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[150px] pointer-events-none z-[1]" />
         
         <div className="max-w-5xl mx-auto w-full z-10 flex flex-col items-center">
           <Reveal>
@@ -341,8 +343,8 @@ export function LandingPageContent() {
       </section>
 
       {/* TRENDING SECTION */}
-      <section className="py-32 px-6 relative z-10">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-32 px-4 md:px-6 relative z-10 overflow-x-hidden">
+        <div className="max-w-7xl mx-auto min-w-0">
           <Reveal>
             <div className="mb-16">
               <span className="font-label font-medium text-[11px] tracking-[0.15em] text-rose uppercase block mb-4">// Trending</span>
@@ -352,46 +354,40 @@ export function LandingPageContent() {
             </div>
           </Reveal>
 
-          <HorizontalCarousel
-            ariaLabel="Trending characters"
-            className="pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 md:[&>div]:overflow-visible md:[&>div]:snap-none"
-            fadeEdges={true}
-            fadeFrom="var(--bg)"
-            trackClassName="md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:snap-none gap-4 pe-6 md:pe-0"
-          >
-            <Reveal delay={100} className="snap-start shrink-0 w-[160px] md:w-auto">
-              <div className="landing-lift group relative rounded-2xl overflow-hidden aspect-[2/3] bg-card border border-white/5 hover:border-rose/50 cursor-pointer">
-                <Image src={TRENDING_VAMPIRE_IMAGE} alt="Vampire Lord" fill sizes="33vw" className="object-cover object-top" />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 min-w-0">
+            <Reveal delay={100}>
+              <div className="landing-lift group relative rounded-2xl overflow-hidden aspect-[2/3] bg-card border border-white/5 hover:border-rose/50 cursor-pointer w-full min-w-0">
+                <Image src={TRENDING_VAMPIRE_IMAGE} alt="Vampire Lord" fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover object-top" />
                 <div className="absolute bottom-0 w-full h-full z-10 pointer-events-none" style={{ background: 'linear-gradient(to top, #080608 0%, rgba(8,6,8,0.8) 30%, transparent 60%)' }} />
-                <div className="absolute bottom-0 left-0 w-full p-6 z-20">
-                  <h3 className="font-heading text-2xl text-white mb-2">Vampire Lord</h3>
-                  <p className="font-light text-sm text-gray-300 mb-4">Centuries of thirst, focused entirely on you.</p>
+                <div className="absolute bottom-0 left-0 w-full p-3 md:p-6 z-20">
+                  <h3 className="font-heading text-lg md:text-2xl text-white mb-1 md:mb-2">Vampire Lord</h3>
+                  <p className="font-light text-xs md:text-sm text-gray-300 line-clamp-3 md:line-clamp-none">Centuries of thirst, focused entirely on you.</p>
                 </div>
               </div>
             </Reveal>
 
-            <Reveal delay={200} className="snap-start shrink-0 w-[160px] md:w-auto">
-              <div className="landing-lift group relative rounded-2xl overflow-hidden aspect-[2/3] bg-card border border-white/5 hover:border-rose/50 cursor-pointer">
-                <Image src="/images/trending/android-2b.jpg" alt="Android 2B" fill sizes="160px" className="object-cover object-top" />
+            <Reveal delay={200}>
+              <div className="landing-lift group relative rounded-2xl overflow-hidden aspect-[2/3] bg-card border border-white/5 hover:border-rose/50 cursor-pointer w-full min-w-0">
+                <Image src="/images/trending/android-2b.jpg" alt="Android 2B" fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover object-top" />
                 <div className="absolute bottom-0 w-full h-full z-10 pointer-events-none" style={{ background: 'linear-gradient(to top, #080608 0%, rgba(8,6,8,0.8) 30%, transparent 60%)' }} />
-                <div className="absolute bottom-0 left-0 w-full p-6 z-20">
-                  <h3 className="font-heading text-2xl text-white mb-2">Android 2B</h3>
-                  <p className="font-light text-sm text-gray-300 mb-4">A cold exterior hiding complex, newly formed emotions.</p>
+                <div className="absolute bottom-0 left-0 w-full p-3 md:p-6 z-20">
+                  <h3 className="font-heading text-lg md:text-2xl text-white mb-1 md:mb-2">Android 2B</h3>
+                  <p className="font-light text-xs md:text-sm text-gray-300 line-clamp-3 md:line-clamp-none">A cold exterior hiding complex, newly formed emotions.</p>
                 </div>
               </div>
             </Reveal>
 
-            <Reveal delay={300} className="snap-start shrink-0 w-[160px] md:w-auto">
-              <div className="landing-lift group relative rounded-2xl overflow-hidden aspect-[2/3] bg-card border border-white/5 hover:border-rose/50 cursor-pointer">
-                <Image src="/images/trending/elf-ranger.jpg" alt="Elf Ranger" fill sizes="160px" className="object-cover object-top" />
+            <Reveal delay={300} className="col-span-2 md:col-span-1 max-w-[calc(50%-6px)] md:max-w-none mx-auto md:mx-0 w-full">
+              <div className="landing-lift group relative rounded-2xl overflow-hidden aspect-[2/3] bg-card border border-white/5 hover:border-rose/50 cursor-pointer w-full min-w-0">
+                <Image src="/images/trending/elf-ranger.jpg" alt="Elf Ranger" fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover object-top" />
                 <div className="absolute bottom-0 w-full h-full z-10 pointer-events-none" style={{ background: 'linear-gradient(to top, #080608 0%, rgba(8,6,8,0.8) 30%, transparent 60%)' }} />
-                <div className="absolute bottom-0 left-0 w-full p-6 z-20">
-                  <h3 className="font-heading text-2xl text-white mb-2">Elf Ranger</h3>
-                  <p className="font-light text-sm text-gray-300 mb-4">Lost in the woods, she needs your guidance and protection.</p>
+                <div className="absolute bottom-0 left-0 w-full p-3 md:p-6 z-20">
+                  <h3 className="font-heading text-lg md:text-2xl text-white mb-1 md:mb-2">Elf Ranger</h3>
+                  <p className="font-light text-xs md:text-sm text-gray-300 line-clamp-3 md:line-clamp-none">Lost in the woods, she needs your guidance and protection.</p>
                 </div>
               </div>
             </Reveal>
-          </HorizontalCarousel>
+          </div>
         </div>
       </section>
 

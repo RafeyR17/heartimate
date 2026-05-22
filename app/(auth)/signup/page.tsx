@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { stripCredentialQueryFromUrl } from "@/lib/auth-query-strip";
 import { useSignUp } from "@clerk/nextjs/legacy";
 import { capturePostHog, identifyPostHog } from "@/lib/posthog-browser";
 import { mapClerkError } from "@/lib/auth-errors";
@@ -30,10 +31,16 @@ export default function SignupPage() {
   };
   const strength = getPasswordStrength();
 
+  useEffect(() => {
+    const clean = stripCredentialQueryFromUrl(new URL(window.location.href));
+    if (!clean) return;
+    window.history.replaceState(null, "", `${clean.pathname}${clean.search}`);
+  }, []);
+
   async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
 
-    if (!isLoaded) {
+    if (!isLoaded || !signUp) {
       setError('Still loading — please try again in a moment.');
       return;
     }
@@ -238,7 +245,7 @@ export default function SignupPage() {
             <div className="flex-1 h-[1px] bg-white/10" />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div>
               <label htmlFor="signup-email" className="sr-only">
                 Email address
@@ -246,7 +253,6 @@ export default function SignupPage() {
               <input
                 id="signup-email"
                 type="email"
-                name="email"
                 autoComplete="email"
                 placeholder="your@email.com"
                 value={email}
@@ -262,7 +268,6 @@ export default function SignupPage() {
               <input
                 id="signup-password"
                 type="password"
-                name="password"
                 autoComplete="new-password"
                 placeholder="Password"
                 value={password}
@@ -321,11 +326,12 @@ export default function SignupPage() {
             )}
 
             <button
-              type="submit"
-              disabled={loading}
+              type="button"
+              disabled={loading || !isLoaded}
+              onClick={() => void handleSubmit()}
               className="btn-primary w-full uppercase tracking-wider mt-4"
             >
-              {loading ? "Creating..." : "BEGIN →"}
+              {!isLoaded ? "Loading..." : loading ? "Creating..." : "BEGIN →"}
             </button>
           </form>
 

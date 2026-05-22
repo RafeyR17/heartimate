@@ -14,7 +14,7 @@ export function TopbarClient() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useUser();
-  const { toggle } = useMobileNav();
+  const { open, toggle, menuTriggerRef } = useMobileNav();
   const showMobileSearch = pathname === "/explore";
 
   const [mobileSearchSynced, setMobileSearchSynced] = useState(false);
@@ -37,9 +37,11 @@ export function TopbarClient() {
     <div className="h-14 md:h-[60px] border-b border-white/5 bg-[rgba(8,6,8,0.8)] backdrop-blur px-4 md:px-8 flex items-center justify-between gap-3 sticky top-0 z-40 safe-top">
       <div className="flex items-center gap-2 md:hidden shrink-0">
         <button
+          ref={menuTriggerRef}
           type="button"
           onClick={toggle}
           aria-label="Open menu"
+          aria-expanded={open}
           aria-controls="mobile-nav-drawer"
           className="touch-target rounded-lg text-white/70 hover:text-white hover:bg-white/5"
         >

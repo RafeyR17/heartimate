@@ -1,6 +1,6 @@
 /** Optimized static assets under /public/images (WebP preferred; JPEG fallback where noted). */
 
-export const HERO_BG_IMAGE = '/images/hero/hero-bg.webp'
+export const HERO_BG_IMAGE = '/images/hero/hero-bg.jpg'
 
 export const TRENDING_VAMPIRE_IMAGE = '/images/trending/vampire-lord.webp'
 

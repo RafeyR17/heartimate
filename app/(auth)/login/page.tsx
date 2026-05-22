@@ -14,6 +14,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { capturePostHog, identifyPostHog } from "@/lib/posthog-browser";
 import { mapClerkError } from "@/lib/auth-errors";
+import { stripCredentialQueryFromUrl } from "@/lib/auth-query-strip";
 import type { ClerkSignInSecondFactor } from "@/lib/clerk-sign-in-types";
 
 function LoginPageContent() {
@@ -29,6 +30,12 @@ function LoginPageContent() {
       router.replace(postLoginPath);
     }
   }, [isSignedIn, router, postLoginPath]);
+
+  useEffect(() => {
+    const clean = stripCredentialQueryFromUrl(new URL(window.location.href));
+    if (!clean) return;
+    window.history.replaceState(null, "", `${clean.pathname}${clean.search}`);
+  }, []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -419,6 +426,7 @@ function LoginPageContent() {
               e.preventDefault();
               handleLogin();
             }}
+            noValidate
             className="space-y-4"
           >
             <label htmlFor="login-email" className="sr-only">
@@ -427,7 +435,6 @@ function LoginPageContent() {
             <input
               id="login-email"
               type="email"
-              name="email"
               autoComplete="email"
               placeholder="your@email.com"
               value={email}
@@ -443,7 +450,6 @@ function LoginPageContent() {
               <input
                 id="login-password"
                 type={showPassword ? "text" : "password"}
-                name="password"
                 autoComplete="current-password"
                 placeholder="Password"
                 value={password}
@@ -464,11 +470,14 @@ function LoginPageContent() {
             {error && <p className="text-error">{error}</p>}
 
             <button
-              type="submit"
-              disabled={loading}
+              type="button"
+              disabled={loading || !isLoaded}
+              onClick={() => {
+                void handleLogin();
+              }}
               className="btn-primary w-full mt-2 uppercase tracking-wider"
             >
-              {loading ? "Signing in..." : "ENTER HEARTIMATE →"}
+              {!isLoaded ? "Loading..." : loading ? "Signing in..." : "ENTER HEARTIMATE →"}
             </button>
           </form>
 

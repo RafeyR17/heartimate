@@ -5,6 +5,7 @@ import { API_NOT_FOUND } from '@/lib/api-route-codes'
 import { apiError, apiSuccess } from '@/lib/api'
 import { routeFailure } from '@/lib/observability/route-error'
 import { parseJsonBody, onboardingPostSchema } from '@/lib/api-schemas'
+import { personalizeGreeting, resolveChatGreetingName } from '@/lib/greeting'
 import { fetchOnboardingStarters } from '@/lib/onboarding-starters'
 import { runApiHandler } from '@/lib/observability/api-route'
 import { createSupabaseAnonClient } from '@/lib/supabase-server'
@@ -37,7 +38,7 @@ export const POST = withAuthedApi(async (authed, req: Request) => {
     const bodyResult = await parseJsonBody(req, onboardingPostSchema)
     if (!bodyResult.ok) return bodyResult.response
 
-    const { displayName, kinkPrefs, starterCharId, characterName, isAdult } =
+    const { displayName, kinkPrefs, personaId, starterCharId, characterName, isAdult } =
       bodyResult.data
     // Zod requires isAdult === true; durable gate for NSFW is adult_confirmed_at below.
     if (!isAdult) {
@@ -53,6 +54,23 @@ export const POST = withAuthedApi(async (authed, req: Request) => {
 
     if (!character) {
       return apiError('Starter character not found', 404, API_NOT_FOUND.character)
+    }
+
+    const { data: persona, error: personaError } = await supabase
+      .from('personas')
+      .select('id, name')
+      .eq('id', personaId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (personaError) {
+      log.error('onboarding.persona_lookup_failed', { error: personaError.message })
+      return apiError('Failed to verify persona', 500, {
+        code: API_ERROR_CODES.INTERNAL_ERROR,
+      })
+    }
+    if (!persona) {
+      return apiError('Persona not found', 404, API_NOT_FOUND.persona)
     }
 
     const { data: updatedUser, error: userError } = await supabase
@@ -80,14 +98,23 @@ export const POST = withAuthedApi(async (authed, req: Request) => {
       ? `${characterName}'s Story`
       : `${character.name}'s Story`
 
+    const greetingWho = resolveChatGreetingName({
+      userDisplayName: displayName,
+      personaName: String(persona.name ?? ''),
+    })
+    const personalizedGreeting = personalizeGreeting(
+      character.greeting ?? '',
+      greetingWho
+    )
+
     const { data: created, error: createError } = await supabase.rpc(
       'create_chat_with_greeting',
       {
         p_user_id: updatedUser?.id ?? user.id,
         p_character_id: starterCharId,
-        p_persona_id: null,
+        p_persona_id: personaId,
         p_title: titleString,
-        p_greeting: character.greeting ?? '',
+        p_greeting: personalizedGreeting,
       }
     )
 

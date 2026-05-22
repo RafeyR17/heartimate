@@ -40,6 +40,7 @@ export type ChatPageCharacter = {
 export type ChatPageRow = {
   id: string
   title: string | null
+  persona_id?: string | null
   affection_score: number | null
   relationship_level: string | null
   characters: ChatPageCharacter | ChatPageCharacter[] | null

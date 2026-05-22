@@ -3,8 +3,8 @@ import { assertApiRateLimit } from '@/lib/api-rate-limits'
 import { apiError, apiSuccess } from '@/lib/api'
 import { validatePersonaFormInput } from '@/lib/api-validation'
 import { runApiHandler } from '@/lib/observability/api-route'
+import { uploadPreparedAvatar } from '@/lib/avatar-storage'
 import { processAvatarUpload } from '@/lib/upload'
-import { avatarStorageUploadOptions } from '@/lib/storage-upload'
 
 export const GET = withAuthedApi(async (authed, req: Request) => {
   return runApiHandler('GET /api/personas', req, async ({ log, setUserId }) => {
@@ -61,17 +61,16 @@ export const POST = withAuthedApi(async (authed, req: Request) => {
         return apiError(prepared.error, 400)
       }
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(prepared.fileName, prepared.buffer, avatarStorageUploadOptions(prepared.contentType))
-
-      if (uploadError) {
-        log.error('personas.upload_failed', { error: uploadError.message })
+      const uploaded = await uploadPreparedAvatar(
+        prepared.fileName,
+        prepared.buffer,
+        prepared.contentType
+      )
+      if (!uploaded.ok) {
+        log.error('personas.upload_failed', { error: uploaded.error })
         return apiError('Failed to upload avatar', 500)
       }
-
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(prepared.fileName)
-      avatar_url = urlData.publicUrl
+      avatar_url = uploaded.publicUrl
     }
 
     const { data, error } = await supabase

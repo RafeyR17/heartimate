@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, type ReactNode, type RefObject } from 'react'
-import type { Persona } from '@/lib/personas'
+import type { Persona } from '@/lib/persona-constants'
 import type { ChatCharacter } from './chat-types'
 import type { useChatStream } from './useChatStream'
 

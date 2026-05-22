@@ -55,7 +55,9 @@ export default function ChatMessageItem({ msg, index, touchHandlers }: ChatMessa
       <div
         className={cn(
           'min-w-0',
-          isUser ? 'max-w-[80%] sm:max-w-[70%] md:max-w-[65%]' : 'max-w-[85%] md:max-w-[75%]'
+          isUser
+            ? 'max-w-[min(100%,92%)] sm:max-w-[80%] md:max-w-[65%]'
+            : 'w-full max-w-full sm:max-w-[92%] md:max-w-[75%]'
         )}
       >
         {isUser ? (
@@ -100,7 +102,7 @@ export default function ChatMessageItem({ msg, index, touchHandlers }: ChatMessa
                     className="relative rounded-[16px_4px_16px_16px] bg-[rgba(232,80,122,0.22)] border border-[rgba(232,80,122,0.38)] px-4 py-3 pr-11 font-body text-[14px] text-white leading-relaxed outline-none ring-[#e8507a]/35 focus-visible:ring-2 select-text"
                     {...touchHandlers}
                   >
-                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    <p className="whitespace-pre-wrap break-words">{formatMessage(msg.content)}</p>
                     {!isStreaming && (
                       <div className="absolute top-1.5 right-1.5 z-10 flex items-center gap-0.5 rounded-md bg-black/30 p-0.5 opacity-0 transition-opacity duration-150 group-hover/msg:opacity-100 group-focus-within/msg:opacity-100">
                         <button
@@ -153,7 +155,7 @@ export default function ChatMessageItem({ msg, index, touchHandlers }: ChatMessa
             )}
           </div>
         ) : (
-          <div className="flex gap-2 md:gap-3 group/msg">
+          <div className="flex gap-2 md:gap-3 group/msg w-full min-w-0">
             <div className="relative w-7 h-7 md:w-8 md:h-8 rounded-full overflow-hidden border border-[#e8507a]/20 bg-gradient-to-br from-[#1a0a20] to-[#2d1040] flex-shrink-0 flex items-center justify-center">
               {character.avatar_url ? (
                 <AvatarImage
@@ -167,11 +169,11 @@ export default function ChatMessageItem({ msg, index, touchHandlers }: ChatMessa
                 <span className="text-[#e8507a] font-heading italic text-[10px]">AI</span>
               )}
             </div>
-            <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex flex-col gap-1 min-w-0 flex-1">
               <TimestampHover label={formatMessageTooltip(msg.created_at)}>
                 <div
                   tabIndex={0}
-                  className={`relative bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)] rounded-[4px_16px_16px_16px] p-[14px_16px] pr-10 font-body text-[rgba(255,255,255,0.9)] leading-[1.75] shadow-md select-text outline-none ring-[#e8507a]/30 focus-visible:ring-2 ${
+                  className={`relative w-full bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)] rounded-[4px_16px_16px_16px] p-[14px_16px] pr-10 font-body text-[rgba(255,255,255,0.9)] leading-[1.75] shadow-md select-text outline-none ring-[#e8507a]/30 focus-visible:ring-2 ${
                     justSpecialIds.has(msg.id) ? 'special-bubble' : ''
                   }`}
                   {...touchHandlers}

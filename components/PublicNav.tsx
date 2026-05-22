@@ -6,7 +6,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Menu, Search, X, Compass, LogIn, UserPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { iconTouchClass, primaryCtaTouchClass } from '@/lib/touch-targets'
-import { useMobileNav } from '@/components/MobileNavProvider'
+import { MOBILE_NAV_BACKDROP_CLASS, useMobileNav } from '@/components/MobileNavProvider'
 
 const CHARACTER_DETAIL_PATH = /^\/characters\/[^/]+$/
 
@@ -42,10 +42,10 @@ function PublicMobileDrawer({
       <button
         type="button"
         aria-label="Close menu"
-        aria-hidden={!open}
         tabIndex={open ? 0 : -1}
         onClick={onClose}
         className={cn(
+          MOBILE_NAV_BACKDROP_CLASS,
           'md:hidden fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm transition-opacity duration-300',
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         )}
@@ -53,9 +53,9 @@ function PublicMobileDrawer({
       <aside
         id="public-mobile-nav-drawer"
         role="dialog"
-        aria-modal="true"
+        aria-modal={open}
         aria-label="Navigation menu"
-        aria-hidden={!open}
+        hidden={!open}
         className={cn(
           'md:hidden fixed top-0 left-0 bottom-0 z-[56] w-[min(280px,85vw)] border-r border-white/10 shadow-2xl transition-transform duration-300 ease-out bg-[#0d0a0e]',
           open ? 'translate-x-0' : '-translate-x-full pointer-events-none'
@@ -159,7 +159,7 @@ export function PublicNav() {
   const pathname = usePathname() ?? ''
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { open, toggle, close } = useMobileNav()
+  const { open, toggle, close, menuTriggerRef } = useMobileNav()
   const [searchQuery, setSearchQuery] = useState('')
 
   const logoHref = '/'
@@ -204,9 +204,11 @@ export function PublicNav() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 md:h-20 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1 md:gap-0 min-w-0 shrink-0">
             <button
+              ref={menuTriggerRef}
               type="button"
               onClick={toggle}
               aria-label="Open menu"
+              aria-expanded={open}
               aria-controls="public-mobile-nav-drawer"
               className={cn(iconTouchClass, 'md:hidden text-white/70 hover:text-white hover:bg-white/5 -ml-2')}
             >

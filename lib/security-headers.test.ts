@@ -6,13 +6,9 @@ describe('getSecurityHeaders', () => {
     vi.unstubAllEnvs()
   })
 
-  it('includes CSP and anti-clickjacking headers', () => {
-    const headers = getSecurityHeaders()
-    const map = Object.fromEntries(headers.map((h) => [h.key, h.value]))
-
-    expect(map['Content-Security-Policy']).toContain("default-src 'self'")
-    expect(map['Content-Security-Policy']).toContain("frame-ancestors 'none'")
-    expect(map['Content-Security-Policy']).toContain("connect-src 'self'")
+  it('includes anti-clickjacking headers (CSP applied in proxy.ts, not here)', () => {
+    const map = Object.fromEntries(getSecurityHeaders().map((h) => [h.key, h.value]))
+    expect(map['Content-Security-Policy']).toBeUndefined()
     expect(map['X-Frame-Options']).toBe('DENY')
     expect(map['Referrer-Policy']).toBe('strict-origin-when-cross-origin')
     expect(map['X-Content-Type-Options']).toBe('nosniff')

@@ -167,12 +167,19 @@ export function formatChatApiError(parsed: ParsedApiError): ChatApiErrorDisplay 
         toastMessage: msg,
       }
     }
-    case 503:
+    case 503: {
+      const fallback = parsed.error || 'Chat is temporarily unavailable. Try again shortly.'
+      const migrationHint = /idempotency|20240530_chat_idempotency/i.test(fallback)
       return {
-        inlineMarkdown: '*Chat is temporarily unavailable.*',
-        toastTitle: 'Chat unavailable',
-        toastMessage: 'Chat is temporarily unavailable. Try again shortly.',
+        inlineMarkdown: migrationHint
+          ? '*Chat needs a database update.*'
+          : '*Chat is temporarily unavailable.*',
+        toastTitle: migrationHint ? 'Database migration needed' : 'Chat unavailable',
+        toastMessage: migrationHint
+          ? 'Apply migration 20240530_chat_idempotency.sql in Supabase, then retry.'
+          : fallback,
       }
+    }
     default: {
       const fallback = parsed.error || 'Something went wrong'
       return {

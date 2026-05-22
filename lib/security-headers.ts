@@ -1,15 +1,21 @@
 type Header = { key: string; value: string }
 
-/** Build Content-Security-Policy (tighten with nonces later if needed). */
-function buildContentSecurityPolicy(): string {
+/** Build Content-Security-Policy (nonce-based tightening later if needed). */
+export function buildContentSecurityPolicy(): string {
+  const isProd = process.env.NODE_ENV === 'production'
+  // Next.js boot/HMR uses inline scripts; strict script-src without 'unsafe-inline' breaks dev and hydration.
+  const scriptSrc = [
+    "script-src 'self'",
+    "'unsafe-inline'",
+    ...(isProd ? [] : ["'unsafe-eval'"]),
+    'https://*.clerk.accounts.dev',
+    'https://*.clerk.com',
+    'https://challenges.cloudflare.com',
+  ]
+
   const directives = [
     "default-src 'self'",
-    [
-      "script-src 'self'",
-      'https://*.clerk.accounts.dev',
-      'https://*.clerk.com',
-      'https://challenges.cloudflare.com',
-    ].join(' '),
+    scriptSrc.join(' '),
     [
       "connect-src 'self'",
       'https://*.clerk.accounts.dev',
@@ -55,7 +61,6 @@ export function getSecurityHeaders(): Header[] {
       key: 'Permissions-Policy',
       value: 'camera=(), microphone=(), geolocation=()',
     },
-    { key: 'Content-Security-Policy', value: buildContentSecurityPolicy() },
   ]
 
   if (process.env.NODE_ENV === 'production') {

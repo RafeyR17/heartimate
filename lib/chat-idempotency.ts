@@ -1,8 +1,9 @@
 import { apiError, streamTextResponse } from '@/lib/api'
-import { chatRateLimitUnavailableResponse } from '@/lib/chat-limits'
+import { API_ERROR_CODES } from '@/lib/api-error-codes'
 import { getApiRequestId } from '@/lib/observability/request-context'
 import { getServiceRoleClient } from '@/lib/service-role'
 import { serverLog } from '@/lib/server-log'
+import { isMissingDbRpc } from '@/lib/supabase-rpc'
 
 export const IDEMPOTENCY_KEY_MAX_LENGTH = 128
 const STALE_PROCESSING_SECONDS = 120
@@ -20,8 +21,20 @@ export function normalizeIdempotencyKey(raw: string | null): string | null {
   return key
 }
 
-export function idempotencyUnavailableResponse(): Response {
-  return chatRateLimitUnavailableResponse()
+const IDEMPOTENCY_MIGRATION_HINT =
+  'Apply Supabase migration supabase/migrations/20240530_chat_idempotency.sql (and 20240607_revoke_idempotency_public.sql).'
+
+export function idempotencyUnavailableResponse(opts?: { migrationMissing?: boolean }): Response {
+  if (opts?.migrationMissing) {
+    return apiError(
+      `Chat idempotency is not configured. ${IDEMPOTENCY_MIGRATION_HINT}`,
+      503,
+      { code: API_ERROR_CODES.SERVICE_UNAVAILABLE }
+    )
+  }
+  return apiError('Chat is temporarily unavailable', 503, {
+    code: API_ERROR_CODES.SERVICE_UNAVAILABLE,
+  })
 }
 
 export async function claimChatIdempotency(
@@ -38,6 +51,19 @@ export async function claimChatIdempotency(
   })
 
   if (error) {
+    if (isMissingDbRpc(error)) {
+      if (process.env.NODE_ENV === 'development') {
+        serverLog.warn('chat-idempotency', 'claim_chat_idempotency missing; proceeding without idempotency', {
+          hint: IDEMPOTENCY_MIGRATION_HINT,
+        })
+        return { action: 'proceed' }
+      }
+      serverLog.error('chat-idempotency', 'claim error (migration missing)', error)
+      return {
+        action: 'unavailable',
+        response: idempotencyUnavailableResponse({ migrationMissing: true }),
+      }
+    }
     serverLog.error('chat-idempotency', 'claim error', error)
     return { action: 'unavailable', response: idempotencyUnavailableResponse() }
   }

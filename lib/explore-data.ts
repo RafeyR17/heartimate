@@ -5,6 +5,7 @@ import {
   normalizeIlikeSearchQuery,
 } from '@/lib/postgrest-filters'
 import { EXPLORE_CACHE_TAG } from '@/lib/cache-tags'
+import { isSupabaseServiceRoleConfigured } from '@/lib/runtime-env'
 import { serverLog } from '@/lib/server-log'
 
 /** Max rows per Explore request (all sorts). */
@@ -76,6 +77,16 @@ function exploreCacheKey(key: ExploreQueryKey): string {
 }
 
 async function fetchExplorePage(key: ExploreQueryKey): Promise<ExplorePageData> {
+  if (!isSupabaseServiceRoleConfigured()) {
+    return {
+      characters: [],
+      totalCount: 0,
+      hasMore: false,
+      displayTotalCount: 0,
+      fetchError: 'Catalog is not configured.',
+    }
+  }
+
   const supabase = getServiceRoleClient()
   const queryText = key.q
   const selectedTags = key.tags ? key.tags.split(',').filter(Boolean) : []

@@ -112,7 +112,7 @@ export const PRIVACY_SECTIONS = [
     title: '1. Overview',
     paragraphs: [
       'This Privacy Policy explains how Heartimate collects, uses, and shares information when you use our website and app.',
-      'We process data to provide AI roleplay, authentication, storage of your chats and characters, security, and basic analytics. We do not sell your personal information.',
+      'We process data to provide AI roleplay, authentication, storage of your chats and characters, and security. We do not sell your personal information.',
     ],
   },
   {
@@ -122,10 +122,10 @@ export const PRIVACY_SECTIONS = [
       'The information we collect depends on how you use the Service.',
     ],
     list: [
-      'Account data: identifiers and profile fields from Clerk (e.g. user id, email if you provide it, display name you set in Heartimate).',
-      'App profile: display name, optional bio, avatar URL, kink preferences, adult confirmation timestamp, and similar fields stored in our database (Supabase).',
+      'Account data: identifiers and profile fields tied to your sign-in (e.g. user id, email if you provide it, display name you set in Heartimate).',
+      'App profile: display name, optional bio, avatar URL, kink preferences, adult confirmation timestamp, and similar fields stored on our systems.',
       'User content: characters, personas, chat messages, likes, reports, and related metadata you create.',
-      'Usage and technical data: IP address, browser/device type, request logs, error diagnostics, and product analytics events (e.g. via PostHog when enabled).',
+      'Usage and technical data: IP address, browser or device type, request logs, crash and error reports, and events about how you use the app (for example which pages you visit or when you start a chat).',
       'Cookies and local storage: session and preference data needed for sign-in and the app to function.',
     ],
   },
@@ -140,7 +140,7 @@ export const PRIVACY_SECTIONS = [
       'Store and sync your chats, characters, and personas.',
       'Send your messages and character context to AI providers to generate replies.',
       'Enforce rate limits, prevent abuse, and keep the Service secure.',
-      'Improve reliability and understand how features are used (analytics).',
+      'Improve reliability, fix bugs, and understand which parts of the app people use.',
       'Respond to reports and comply with legal obligations.',
     ],
   },
@@ -152,11 +152,10 @@ export const PRIVACY_SECTIONS = [
       'We may also disclose information if required by law, to protect rights and safety, or in connection with a merger or sale of the business (with notice where required).',
     ],
     list: [
-      'Clerk — authentication and session management.',
-      'Supabase — database, storage (e.g. avatars), and hosting of your app data.',
-      'OpenRouter (and underlying model providers) — processing chat content to produce AI responses. Message content is sent to generate replies; do not include sensitive real-world data you do not want processed by AI vendors.',
-      'PostHog (if enabled) — product analytics.',
-      'Vercel (or similar host) — serving the application and edge logs.',
+      'Authentication and session services — sign-in and account access.',
+      'Hosting and data storage — database, file storage (e.g. avatars), and your app data.',
+      'AI providers — processing chat content to produce responses. Message content is sent to generate replies; do not include sensitive real-world data you do not want processed by third parties.',
+      'Application hosting — serving the website and app, including server and error logs.',
     ],
   },
   {

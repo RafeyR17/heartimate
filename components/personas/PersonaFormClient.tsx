@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CameraIcon, Eye, X } from 'lucide-react'
-import type { Persona } from '@/lib/personas'
+import type { Persona } from '@/lib/persona-constants'
 import { AvatarImage } from '@/components/ui/avatar-image'
 import { useToast } from '@/components/ToastProvider'
 import { apiFetch } from '@/lib/api-client'

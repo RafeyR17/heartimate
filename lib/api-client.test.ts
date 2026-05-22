@@ -87,7 +87,17 @@ describe('formatChatApiError', () => {
       status: 503,
       error: 'AI service unavailable',
     })
-    expect(display.toastMessage).toContain('temporarily unavailable')
+    expect(display.toastMessage).toBe('AI service unavailable')
+    expect(display.toastTitle).toBe('Chat unavailable')
+  })
+
+  it('maps 503 idempotency migration errors with setup hint', () => {
+    const display = formatChatApiError({
+      status: 503,
+      error: 'Chat idempotency is not configured. Apply migration 20240530_chat_idempotency.sql',
+    })
+    expect(display.toastTitle).toBe('Database migration needed')
+    expect(display.toastMessage).toMatch(/20240530_chat_idempotency/)
   })
 
   it('maps 409 to still processing copy', () => {

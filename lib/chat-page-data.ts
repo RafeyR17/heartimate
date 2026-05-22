@@ -5,7 +5,7 @@ import {
   type ChatPageRow,
 } from '@/lib/app-types'
 import { fetchChatMessagesPage } from '@/lib/chat-messages'
-import type { Persona } from '@/lib/personas'
+import type { Persona } from '@/lib/persona-constants'
 import type { ChatCharacter } from '@/lib/chat-ui-types'
 
 const CHAT_PAGE_SELECT = `
@@ -71,7 +71,17 @@ export async function fetchChatPageBundle(
   const characterRaw = pickNestedOne(chatRow.characters)
   if (!characterRaw) return null
 
-  const persona = (pickNestedOne(chatRow.persona) as Persona | null) ?? null
+  let persona = (pickNestedOne(chatRow.persona) as Persona | null) ?? null
+  const personaId = chatRow.persona_id ?? null
+  if (!persona && personaId) {
+    const { data: personaRow } = await supabase
+      .from('personas')
+      .select('id, user_id, name, avatar_url, short_bio, appearance, personality, created_at, updated_at')
+      .eq('id', personaId)
+      .eq('user_id', userId)
+      .maybeSingle()
+    persona = (personaRow as Persona | null) ?? null
+  }
   const initialPage = await fetchChatMessagesPage(supabase, chatId, { limit: 50 })
 
   return {

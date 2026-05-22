@@ -18,6 +18,7 @@ import {
   OverviewTab,
   PersonasTab,
 } from './profile-sections'
+import { LogoutButton } from '@/components/LogoutButton'
 import { useToast } from '@/components/ToastProvider'
 import { apiFetch, applyApiFetchFailure } from '@/lib/api-client'
 import { useProfileInvalidate } from '@/lib/query/use-profile-invalidate'
@@ -365,24 +366,30 @@ function ProfilePageInner(props: ProfileClientProps) {
             ))}
           </div>
 
+          <div className="hidden md:flex flex-col gap-2 shrink-0 self-start">
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-white/[0.12] font-body text-[13px] text-muted hover:border-[rgba(232,80,122,0.4)] hover:text-white transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit Profile
+            </button>
+            <LogoutButton className="w-auto justify-center border border-white/[0.12] hover:border-white/20 hover:text-rose" />
+          </div>
+        </div>
+
+        <div className="md:hidden mx-4 mb-4 flex flex-col gap-2">
           <button
             type="button"
             onClick={() => setEditOpen(true)}
-            className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-white/[0.12] font-body text-[13px] text-muted hover:border-[rgba(232,80,122,0.4)] hover:text-white transition-colors shrink-0 self-start"
+            className="inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-white/[0.12] font-body text-[13px] text-muted"
           >
             <Pencil className="w-3.5 h-3.5" />
             Edit Profile
           </button>
+          <LogoutButton className="justify-center border border-white/[0.12] hover:border-white/20 hover:text-rose" />
         </div>
-
-        <button
-          type="button"
-          onClick={() => setEditOpen(true)}
-          className="md:hidden mx-4 mb-4 inline-flex items-center justify-center gap-2 w-[calc(100%-2rem)] py-2.5 rounded-lg border border-white/[0.12] font-body text-[13px] text-muted"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-          Edit Profile
-        </button>
       </header>
 
       {/* Tabs */}

@@ -1,4 +1,4 @@
-import type { Persona } from '@/lib/personas'
+import type { Persona } from '@/lib/persona-constants'
 import type { MessageRow } from '@/lib/api-contract'
 
 /** UI chat message — same shape as API `MessageRow`. */
