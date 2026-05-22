@@ -9,6 +9,7 @@ CI runs `npm audit --audit-level=high` and **fails on high/critical** findings. 
 | [GHSA-qx2v-qp2m-jg93](https://github.com/advisories/GHSA-qx2v-qp2m-jg93) | `postcss` (via `next`) | moderate | accepted | Transitive dependency bundled by Next.js. `npm audit fix --force` downgrades Next to 9.x (breaking). Monitor Next.js release notes; bump when upstream ships patched postcss. |
 | [GHSA-pxg6-pf52-xh8x](https://github.com/advisories/GHSA-pxg6-pf52-xh8x) | `cookie` (via `@lhci/cli` → `lighthouse` → `@sentry/node`) | low | accepted | Dev-only Lighthouse CI tooling; not in production runtime. Revisit on `@lhci/cli` bumps. |
 | [GHSA-52f5-9888-hmc6](https://github.com/advisories/GHSA-52f5-9888-hmc6) | `tmp` (via `@lhci/cli` → `inquirer`) | low | accepted | Dev-only CLI temp files; not in production runtime. |
+| [GHSA-qjx8-664m-686j](https://github.com/advisories/GHSA-qjx8-664m-686j) | `js-cookie` (via `@clerk/shared`) | high | **mitigated** | `package.json` `overrides` pins `js-cookie@3.0.7` until Clerk ships a direct bump. |
 
 ## Process
 

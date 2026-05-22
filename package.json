@@ -72,5 +72,8 @@
       "eslint --fix --no-warn-ignored",
       "node scripts/lint-staged-tests.mjs"
     ]
+  },
+  "overrides": {
+    "js-cookie": "3.0.7"
   }
 }

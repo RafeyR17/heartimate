@@ -47,6 +47,7 @@ describe('onboardingPostSchema', () => {
     const result = onboardingPostSchema.safeParse({
       displayName: '  Alex  ',
       kinkPrefs: ['romance'],
+      personaId: 'persona-1',
       starterCharId: 'starter-1',
       isAdult: true,
     })
@@ -61,6 +62,7 @@ describe('onboardingPostSchema', () => {
   it('rejects isAdult false with Must be 18 or older', () => {
     const result = onboardingPostSchema.safeParse({
       displayName: 'Alex',
+      personaId: 'persona-1',
       starterCharId: 'starter-1',
       isAdult: false,
     })
@@ -73,6 +75,7 @@ describe('onboardingPostSchema', () => {
   it('rejects missing isAdult', () => {
     const result = onboardingPostSchema.safeParse({
       displayName: 'Alex',
+      personaId: 'persona-1',
       starterCharId: 'starter-1',
     })
     expect(result.success).toBe(false)
