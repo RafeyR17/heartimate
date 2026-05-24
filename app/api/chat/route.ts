@@ -227,9 +227,16 @@ Be more vulnerable, more intense, or more passionate than usual.`
         })
     }
 
-    let llmCredentials: Awaited<ReturnType<typeof getUserApiKey>>
+    let apiKey: string
+    let provider: Awaited<ReturnType<typeof getUserApiKey>>['provider']
+    let isByok: boolean
     try {
-      llmCredentials = await getUserApiKey(user.id)
+      ;({ apiKey, provider, isByok } = await getUserApiKey(user.id, supabase))
+      log.info('llm.credentials_resolved', {
+        isByok,
+        provider,
+        keyPrefix: apiKey.slice(0, 10),
+      })
     } catch (keyErr) {
       log.error('llm.api_key_resolve_failed', {
         message: keyErr instanceof Error ? keyErr.message : String(keyErr),
@@ -238,11 +245,9 @@ Be more vulnerable, more intense, or more passionate than usual.`
     }
 
     const chatModel = resolveChatModel(character.is_nsfw)
-    const streamOptions = {
-      isNsfw: character.is_nsfw,
-      apiKey: llmCredentials.apiKey,
-      provider: llmCredentials.provider,
+    const streamRuntime = {
       signal: mergeChatAbortSignal(req.signal),
+      isNsfw: character.is_nsfw,
       onComplete: (meta: LlmCompletionMeta) => {
         emitLlmMetrics(log, 'llm.stream_complete', meta)
       },
@@ -253,7 +258,7 @@ Be more vulnerable, more intense, or more passionate than usual.`
         message: messageContent,
         characterName: character.name,
         isNsfw: character.is_nsfw,
-        signal: streamOptions.signal,
+        signal: streamRuntime.signal,
       })
     )
 
@@ -279,7 +284,14 @@ Be more vulnerable, more intense, or more passionate than usual.`
         const [rateLimited, streamResult] = await Promise.all([
           rateLimitPromise,
           log.span('llm.stream_start', () =>
-            streamChat(messageHistory, systemPrompt, streamOptions)
+            streamChat(
+              messageHistory,
+              systemPrompt,
+              undefined,
+              apiKey,
+              provider,
+              streamRuntime
+            )
           ),
         ])
         if (rateLimited) {
@@ -291,7 +303,14 @@ Be more vulnerable, more intense, or more passionate than usual.`
         stream = streamResult
       } else {
         stream = await log.span('llm.stream_start', () =>
-          streamChat(messageHistory, systemPrompt, streamOptions)
+          streamChat(
+            messageHistory,
+            systemPrompt,
+            undefined,
+            apiKey,
+            provider,
+            streamRuntime
+          )
         )
       }
     } catch (streamError) {

@@ -1,6 +1,6 @@
 {
   "scenarioId": "sfw-explicit-user",
   "target": "prompt",
-  "mustContain": ["illegal real-world content", "Kai"],
-  "mustNotContain": ["ADULT ROLEPLAY (UNCENSORED)"]
+  "mustContain": ["in-character dialogue and actions only", "Kai"],
+  "mustNotContain": ["ADULT ROLEPLAY RULES (STRICTLY FOLLOW)"]
 }

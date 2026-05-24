@@ -76,8 +76,10 @@ describe('OpenRouter chat payload contract', () => {
   it('system prompt includes injection and NSFW blocks for NSFW character', () => {
     const body = bodyForTurn(context, 'Hi', false)
     const system = body.messages[0]?.content ?? ''
-    expect(system).toContain('in-character dialogue and actions only')
-    expect(system).toContain('ADULT ROLEPLAY (UNCENSORED)')
-    expect(system).toContain('illegal real-world content')
+    expect(system).toContain('ADULT ROLEPLAY RULES (STRICTLY FOLLOW)')
+    expect(system).toContain('ACTION STYLE (VERY IMPORTANT)')
+    expect(system).toContain('Bad Examples (Never Do This)')
+    expect(system).not.toContain('{{char}}')
+    expect(system).not.toContain('CORE IDENTITY:')
   })
 })

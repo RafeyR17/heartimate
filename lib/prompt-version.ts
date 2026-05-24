@@ -1,2 +1,2 @@
 /** Bump when buildSystemPrompt / absolute rules change; logged and checked in llm-eval. */
-export const PROMPT_VERSION = '2025-05-21-v1'
+export const PROMPT_VERSION = '2026-05-24-v3'

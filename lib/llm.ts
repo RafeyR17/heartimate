@@ -1,5 +1,6 @@
 import { trimMessagesForLLM } from '@/lib/llm-context'
 import { usageFromOpenRouter, type LlmCompletionMeta } from '@/lib/llm-telemetry'
+import { serverLog } from '@/lib/server-log'
 
 export const OPENROUTER_CHAT_URL =
   'https://openrouter.ai/api/v1/chat/completions'
@@ -101,10 +102,26 @@ export function resolveChatGenerationParams(
   }
 }
 
-export function openRouterRequestHeaders(apiKey?: string): Record<string, string> {
-  const key = apiKey?.trim() || process.env.OPENROUTER_API_KEY
+export type OpenRouterHeaderOptions = {
+  /** When false, never substitute OPENROUTER_API_KEY if the passed key is empty. */
+  allowEnvFallback?: boolean
+}
+
+export function openRouterRequestHeaders(
+  apiKey?: string,
+  options?: OpenRouterHeaderOptions
+): Record<string, string> {
+  const allowEnvFallback = options?.allowEnvFallback ?? true
+  const trimmed = apiKey?.trim()
+  const key =
+    trimmed ||
+    (allowEnvFallback ? process.env.OPENROUTER_API_KEY?.trim() : undefined)
   if (!key) {
-    throw new Error('OPENROUTER_API_KEY is not configured')
+    throw new Error(
+      allowEnvFallback
+        ? 'OPENROUTER_API_KEY is not configured'
+        : 'OpenRouter API key is required'
+    )
   }
   return {
     Authorization: `Bearer ${key}`,
@@ -133,9 +150,12 @@ export function resolveChatCompletionsRequest(
       headers: openAiRequestHeaders(key),
     }
   }
+  const explicitKey = options?.apiKey !== undefined
   return {
     url: OPENROUTER_CHAT_URL,
-    headers: openRouterRequestHeaders(options?.apiKey),
+    headers: openRouterRequestHeaders(options?.apiKey, {
+      allowEnvFallback: !explicitKey,
+    }),
   }
 }
 
@@ -208,132 +228,167 @@ export function openRouterChatPayloadShape(
   }
 }
 
+export type StreamChatRuntimeOptions = {
+  signal?: AbortSignal
+  isNsfw?: boolean
+  onComplete?: (meta: LlmCompletionMeta) => void
+}
+
 /**
- * Streams chat completions from OpenRouter.
+ * Streams chat completions (OpenRouter or OpenAI BYOK).
+ * `apiKey` and `provider` are passed from {@link getUserApiKey} on the chat route.
  */
 export async function streamChat(
   messages: Array<{ role: string; content: string }>,
   systemPrompt: string,
-  options?: StreamChatOptions
+  model?: string,
+  apiKey?: string,
+  provider?: string,
+  runtime?: StreamChatRuntimeOptions
 ): Promise<ReadableStream<Uint8Array>> {
-  const isNsfw = options?.isNsfw ?? false
-  const provider = options?.provider ?? 'openrouter'
-  const candidates =
-    provider === 'openai'
-      ? [resolveChatModel(false)]
-      : options?.model
-        ? [options.model]
-        : resolveChatModelCandidates(isNsfw)
-  const { url, headers } = resolveChatCompletionsRequest(options)
-  const startedAt = Date.now()
-  let lastError: Error | null = null
-
-  for (let i = 0; i < candidates.length; i++) {
-    const model =
-      provider === 'openai' ? 'gpt-4o-mini' : candidates[i]!
-    const requestBody = buildOpenRouterChatRequestBody(messages, systemPrompt, {
-      ...options,
-      model,
-      isNsfw,
-    })
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody),
-      signal: options?.signal,
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      lastError = new Error(`OpenRouter error: ${response.status} ${errorText}`)
-      const retryable = response.status >= 500 || response.status === 429
-      if (retryable && i < candidates.length - 1) continue
-      throw lastError
-    }
-
-    if (!response.body) {
-      throw new Error('No response body')
-    }
-
-    const primaryModel = candidates[0]!
-    const fallbackUsed = model !== primaryModel
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let lastUsage: Record<string, number> | undefined
-
-    return new ReadableStream({
-      async start(controller) {
-        let buffer = ''
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            buffer += decoder.decode(value, { stream: true })
-            const lines = buffer.split('\n')
-            buffer = lines.pop() ?? ''
-
-            for (const line of lines) {
-              const closed = processSseLine(line, controller, (usage) => {
-                lastUsage = usage
-              })
-              if (closed) {
-                finishLlmStream(options, {
-                  model,
-                  latencyMs: Date.now() - startedAt,
-                  ...usageFromOpenRouter(lastUsage),
-                  fallbackUsed,
-                  primaryModel,
-                })
-                return
-              }
-            }
-          }
-
-          if (buffer.trim()) {
-            processSseLine(buffer, controller, (usage) => {
-              lastUsage = usage
-            })
-          }
-          finishLlmStream(options, {
-            model,
-            latencyMs: Date.now() - startedAt,
-            ...usageFromOpenRouter(lastUsage),
-            fallbackUsed,
-            primaryModel,
-          })
-          controller.close()
-        } catch (err) {
-          if (options?.signal?.aborted) {
-            finishLlmStream(options, {
-              model,
-              latencyMs: Date.now() - startedAt,
-              ...usageFromOpenRouter(lastUsage),
-              fallbackUsed,
-              primaryModel,
-            })
-            controller.close()
-            return
-          }
-          controller.error(err)
-        }
-      },
-      cancel() {
-        reader.cancel()
-      },
-    })
+  const resolvedProvider = provider === 'openai' ? 'openai' : 'openrouter'
+  const key = apiKey?.trim() || process.env.OPENROUTER_API_KEY?.trim()
+  if (!key) {
+    throw new Error('OPENROUTER_API_KEY is not configured')
   }
 
-  throw lastError ?? new Error('OpenRouter: no model candidates')
+  const baseUrl =
+    resolvedProvider === 'openai'
+      ? 'https://api.openai.com/v1'
+      : 'https://openrouter.ai/api/v1'
+
+  const isNsfw = runtime?.isNsfw ?? false
+  const finalModel =
+    resolvedProvider === 'openai'
+      ? 'gpt-4o-mini'
+      : (model ?? resolveChatModel(isNsfw))
+
+  const generation = resolveChatGenerationParams(isNsfw)
+  const trimmed = trimMessagesForLLM(messages)
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${key}`,
+    'Content-Type': 'application/json',
+  }
+  if (resolvedProvider === 'openrouter') {
+    headers['HTTP-Referer'] =
+      process.env.NEXT_PUBLIC_APP_URL || 'https://heartimate.vercel.app'
+    headers['X-Title'] = 'Heartimate'
+  }
+
+  serverLog.info('llm', 'streamChat request', {
+    baseUrl,
+    provider: resolvedProvider,
+    model: finalModel,
+    keyPrefix: key.slice(0, 10),
+  })
+
+  const startedAt = Date.now()
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: finalModel,
+      messages: [{ role: 'system', content: systemPrompt }, ...trimmed],
+      stream: true,
+      max_tokens: generation.max_tokens,
+      temperature: generation.temperature,
+      ...(resolvedProvider === 'openrouter'
+        ? {
+            presence_penalty: generation.presence_penalty,
+            frequency_penalty: generation.frequency_penalty,
+          }
+        : {}),
+    }),
+    signal: runtime?.signal,
+  })
+
+  if (!response.ok) {
+    const err = await response.text()
+    serverLog.error('llm', 'streamChat failed', {
+      status: response.status,
+      body: err.slice(0, 500),
+    })
+    throw new Error(`LLM failed: ${response.status}`)
+  }
+
+  if (!response.body) {
+    throw new Error('No response body')
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let lastUsage: Record<string, number> | undefined
+
+  return new ReadableStream({
+    async start(controller) {
+      let buffer = ''
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+
+          for (const line of lines) {
+            const closed = processSseLine(line, controller, (usage) => {
+              lastUsage = usage
+            })
+            if (closed) {
+              finishLlmStream(runtime, {
+                model: finalModel,
+                latencyMs: Date.now() - startedAt,
+                ...usageFromOpenRouter(lastUsage),
+                fallbackUsed: false,
+                primaryModel: finalModel,
+              })
+              return
+            }
+          }
+        }
+
+        if (buffer.trim()) {
+          processSseLine(buffer, controller, (usage) => {
+            lastUsage = usage
+          })
+        }
+        finishLlmStream(runtime, {
+          model: finalModel,
+          latencyMs: Date.now() - startedAt,
+          ...usageFromOpenRouter(lastUsage),
+          fallbackUsed: false,
+          primaryModel: finalModel,
+        })
+        controller.close()
+      } catch (err) {
+        if (runtime?.signal?.aborted) {
+          finishLlmStream(runtime, {
+            model: finalModel,
+            latencyMs: Date.now() - startedAt,
+            ...usageFromOpenRouter(lastUsage),
+            fallbackUsed: false,
+            primaryModel: finalModel,
+          })
+          controller.close()
+          return
+        }
+        controller.error(err)
+      }
+    },
+    cancel() {
+      reader.cancel()
+    },
+  })
 }
 
 function finishLlmStream(
-  options: StreamChatOptions | undefined,
+  runtime: StreamChatRuntimeOptions | undefined,
   meta: LlmCompletionMeta
 ): void {
   try {
-    options?.onComplete?.(meta)
+    runtime?.onComplete?.(meta)
   } catch {
     // Telemetry must not break the stream.
   }

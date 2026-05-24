@@ -1,7 +1,9 @@
 import 'server-only'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { decryptKey } from '@/lib/encryption'
 import { getServiceRoleClient } from '@/lib/service-role'
 import { OPENROUTER_CHAT_URL } from '@/lib/llm'
+import { serverLog } from '@/lib/server-log'
 
 export type ByokProvider = 'openrouter' | 'openai'
 
@@ -14,36 +16,95 @@ export type UserApiKeyResult = {
 const OPENROUTER_VALIDATE_MODEL = 'deepseek/deepseek-chat'
 const OPENAI_VALIDATE_MODEL = 'gpt-4o-mini'
 
-export async function getUserApiKey(userId: string): Promise<UserApiKeyResult> {
-  const { data: user, error } = await getServiceRoleClient()
-    .from('users')
-    .select('byok_key_encrypted, byok_provider, is_byok')
-    .eq('id', userId)
-    .maybeSingle()
+function platformOpenRouterKey(): string | undefined {
+  return process.env.OPENROUTER_API_KEY?.trim() || undefined
+}
 
-  if (
-    !error &&
-    user?.is_byok &&
-    user.byok_key_encrypted &&
-    (user.byok_provider === 'openrouter' || user.byok_provider === 'openai')
-  ) {
-    return {
-      apiKey: decryptKey(user.byok_key_encrypted),
-      provider: user.byok_provider,
-      isByok: true,
-    }
+export function normalizeByokProvider(
+  raw: string | null | undefined
+): ByokProvider | null {
+  const normalized = raw?.trim().toLowerCase()
+  if (normalized === 'openrouter' || normalized === 'openai') {
+    return normalized
   }
+  return null
+}
 
-  const fallback = process.env.OPENROUTER_API_KEY?.trim()
+export function inferByokProviderFromApiKey(apiKey: string): ByokProvider | null {
+  const key = apiKey.trim()
+  if (key.startsWith('sk-or-')) return 'openrouter'
+  if (key.startsWith('sk-')) return 'openai'
+  return null
+}
+
+function resolvePlatformApiKey(): UserApiKeyResult {
+  const fallback = platformOpenRouterKey()
   if (!fallback) {
     throw new Error('OPENROUTER_API_KEY is not configured')
   }
-
   return {
     apiKey: fallback,
     provider: 'openrouter',
     isByok: false,
   }
+}
+
+export async function getUserApiKey(
+  userId: string,
+  supabase?: SupabaseClient
+): Promise<UserApiKeyResult> {
+  const client = supabase ?? getServiceRoleClient()
+  const { data: user, error } = await client
+    .from('users')
+    .select('byok_key_encrypted, byok_provider, is_byok')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (error) {
+    serverLog.warn('byok', 'fetch user row failed', {
+      userId,
+      message: error.message,
+    })
+  }
+
+  if (user?.is_byok && user.byok_key_encrypted) {
+    let apiKey: string
+    try {
+      apiKey = decryptKey(user.byok_key_encrypted).trim()
+    } catch (decryptErr) {
+      serverLog.error('byok', 'decrypt failed', {
+        userId,
+        message:
+          decryptErr instanceof Error ? decryptErr.message : String(decryptErr),
+      })
+      const fallback = platformOpenRouterKey()
+      if (!fallback) throw decryptErr
+      serverLog.warn('byok', 'falling back to platform OpenRouter key after decrypt failure')
+      return resolvePlatformApiKey()
+    }
+
+    if (!apiKey) {
+      serverLog.error('byok', 'decrypted key was empty', { userId })
+      const fallback = platformOpenRouterKey()
+      if (!fallback) {
+        throw new Error('BYOK key is empty')
+      }
+      return resolvePlatformApiKey()
+    }
+
+    const provider =
+      normalizeByokProvider(user.byok_provider) ??
+      inferByokProviderFromApiKey(apiKey) ??
+      'openrouter'
+
+    return {
+      apiKey,
+      provider,
+      isByok: true,
+    }
+  }
+
+  return resolvePlatformApiKey()
 }
 
 export function chatCompletionsUrl(provider: ByokProvider): string {

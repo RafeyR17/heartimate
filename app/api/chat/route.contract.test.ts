@@ -155,8 +155,11 @@ describe('POST /api/chat contract', () => {
   function payloadFromCall(index: number) {
     const call = vi.mocked(streamChat).mock.calls[index]
     if (!call) throw new Error('missing streamChat call')
-    const [messages, systemPrompt, options] = call
-    return buildOpenRouterChatRequestBody(messages, systemPrompt, options)
+    const [messages, systemPrompt, model, , , runtime] = call
+    return buildOpenRouterChatRequestBody(messages, systemPrompt, {
+      model,
+      isNsfw: (runtime as { isNsfw?: boolean } | undefined)?.isNsfw,
+    })
   }
 
   it('regenerate does not insert user row and ends history with user', async () => {

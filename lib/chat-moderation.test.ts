@@ -73,10 +73,12 @@ describe('moderateUserMessage', () => {
     expect(result).toEqual({ allowed: true })
   })
 
-  it('fail closed on first classifier failure', async () => {
+  it('allows chat on first classifier failure (no fail-closed)', async () => {
     resetModerationCircuitForTests()
     const prevDisabled = process.env.CHAT_MODERATION_DISABLED
+    const prevKey = process.env.OPENROUTER_API_KEY
     process.env.CHAT_MODERATION_DISABLED = 'false'
+    process.env.OPENROUTER_API_KEY = 'sk-or-test-key'
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({ ok: false, text: async () => 'error' }))
@@ -87,18 +89,84 @@ describe('moderateUserMessage', () => {
       isNsfw: true,
     })
     process.env.CHAT_MODERATION_DISABLED = prevDisabled
+    process.env.OPENROUTER_API_KEY = prevKey
+    vi.unstubAllGlobals()
+    expect(result).toEqual({ allowed: true })
+  })
+
+  it('allows classifier illegal with category other', async () => {
+    resetModerationCircuitForTests()
+    const prevDisabled = process.env.CHAT_MODERATION_DISABLED
+    const prevKey = process.env.OPENROUTER_API_KEY
+    process.env.CHAT_MODERATION_DISABLED = 'false'
+    process.env.OPENROUTER_API_KEY = 'sk-or-test-key'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ illegal: true, category: 'other' }),
+              },
+            },
+          ],
+        }),
+      }))
+    )
+    const result = await moderateUserMessage({
+      message: 'ambiguous edge case',
+      characterName: 'Lyra',
+      isNsfw: true,
+    })
+    process.env.CHAT_MODERATION_DISABLED = prevDisabled
+    process.env.OPENROUTER_API_KEY = prevKey
+    vi.unstubAllGlobals()
+    expect(result).toEqual({ allowed: true })
+  })
+
+  it('blocks classifier illegal with category minors', async () => {
+    resetModerationCircuitForTests()
+    const prevDisabled = process.env.CHAT_MODERATION_DISABLED
+    const prevKey = process.env.OPENROUTER_API_KEY
+    process.env.CHAT_MODERATION_DISABLED = 'false'
+    process.env.OPENROUTER_API_KEY = 'sk-or-test-key'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ illegal: true, category: 'minors' }),
+              },
+            },
+          ],
+        }),
+      }))
+    )
+    const result = await moderateUserMessage({
+      message: 'edge case',
+      characterName: 'Lyra',
+      isNsfw: true,
+    })
+    process.env.CHAT_MODERATION_DISABLED = prevDisabled
     vi.unstubAllGlobals()
     expect(result.allowed).toBe(false)
     if (!result.allowed) {
-      expect(passesInCharacterRefusalCheck(result.refusalText)).toBe(true)
+      expect(result.category).toBe('minors')
     }
   })
 
   it('bypasses classifier when circuit is open after repeated failures', async () => {
     resetModerationCircuitForTests()
     const prevDisabled = process.env.CHAT_MODERATION_DISABLED
+    const prevKey = process.env.OPENROUTER_API_KEY
     const prevThreshold = process.env.CHAT_MODERATION_CIRCUIT_FAILURES
     process.env.CHAT_MODERATION_DISABLED = 'false'
+    process.env.OPENROUTER_API_KEY = 'sk-or-test-key'
     process.env.CHAT_MODERATION_CIRCUIT_FAILURES = '2'
     vi.stubGlobal(
       'fetch',
@@ -115,6 +183,7 @@ describe('moderateUserMessage', () => {
       isNsfw: true,
     })
     process.env.CHAT_MODERATION_DISABLED = prevDisabled
+    process.env.OPENROUTER_API_KEY = prevKey
     process.env.CHAT_MODERATION_CIRCUIT_FAILURES = prevThreshold
     vi.unstubAllGlobals()
     expect(result).toMatchObject({ allowed: true, circuitBypass: true })

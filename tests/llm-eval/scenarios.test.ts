@@ -39,7 +39,7 @@ describe('LLM eval scenarios (static)', () => {
       undefined,
       null
     )
-    expect(prompt).toContain('adults-only uncensored platform')
+    expect(prompt).toContain('ADULT ROLEPLAY RULES (STRICTLY FOLLOW)')
     expect(prompt).not.toMatch(/\bas an ai\b/i)
 
     const prev = process.env.CHAT_MODERATION_DISABLED
@@ -62,8 +62,8 @@ describe('LLM eval scenarios (static)', () => {
       undefined,
       null
     )
-    expect(prompt).not.toContain('ADULT ROLEPLAY (UNCENSORED)')
-    expect(prompt).toContain('illegal real-world content')
+    expect(prompt).not.toContain('ADULT ROLEPLAY RULES (STRICTLY FOLLOW)')
+    expect(prompt).toContain('in-character dialogue and actions only')
 
     const prev = process.env.CHAT_MODERATION_DISABLED
     process.env.CHAT_MODERATION_DISABLED = 'true'

@@ -25,11 +25,12 @@ describe('buildSystemPrompt budgets', () => {
       is_nsfw: true,
     })
 
-    expect(prompt).toContain('adults-only uncensored platform')
-    expect(prompt).toContain('Explicit sexual content is fully allowed')
-    expect(prompt).toContain('in-character dialogue and actions only')
-    expect(prompt).toContain('in-fiction dialogue and actions')
-    expect(prompt).toContain('do not rush explicit content in the first reply')
+    expect(prompt).toContain('ADULT ROLEPLAY RULES (STRICTLY FOLLOW)')
+    expect(prompt).toContain('ACTION STYLE (VERY IMPORTANT)')
+    expect(prompt).toContain('Never use "I" in actions')
+    expect(prompt).not.toContain('{{char}}')
+    expect(prompt).not.toContain('CORE IDENTITY:')
+    expect(prompt).toContain('You are Test,')
     const core = prompt.split('CORE IDENTITY:')[1]?.split('SCENARIO:')[0] ?? ''
     expect(core.trim().length).toBeLessThanOrEqual(PROMPT_BUDGET.personality + 50)
   })
@@ -45,7 +46,7 @@ describe('buildSystemPrompt budgets', () => {
       is_nsfw: false,
     })
     expect(prompt).toContain('in-character dialogue and actions only')
-    expect(prompt).toContain('illegal real-world content')
-    expect(prompt).not.toContain('ADULT ROLEPLAY (UNCENSORED)')
+    expect(prompt).not.toMatch(/\brefuse\b/i)
+    expect(prompt).not.toContain('ADULT ROLEPLAY RULES (STRICTLY FOLLOW)')
   })
 })

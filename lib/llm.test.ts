@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  OPENROUTER_CHAT_URL,
   OPENROUTER_MODEL_DEFAULT,
+  openRouterRequestHeaders,
+  resolveChatCompletionsRequest,
   resolveChatGenerationParams,
   resolveChatModel,
   resolveChatModelCandidates,
@@ -8,6 +11,7 @@ import {
 } from '@/lib/llm'
 
 const ENV_KEYS = [
+  'OPENROUTER_API_KEY',
   'OPENROUTER_MODEL',
   'OPENROUTER_MODEL_FALLBACK',
   'OPENROUTER_MODEL_NSFW',
@@ -27,6 +31,35 @@ afterEach(() => {
   for (const key of ENV_KEYS) {
     delete process.env[key]
   }
+})
+
+describe('resolveChatCompletionsRequest', () => {
+  it('uses explicit BYOK key in Authorization without env fallback', () => {
+    process.env.OPENROUTER_API_KEY = 'sk-or-platform-should-not-be-used'
+    const byokKey = 'sk-or-v1-user-key-abcdef'
+    const { url, headers } = resolveChatCompletionsRequest({
+      apiKey: byokKey,
+      provider: 'openrouter',
+    })
+    expect(url).toBe(OPENROUTER_CHAT_URL)
+    expect(headers.Authorization).toBe(`Bearer ${byokKey}`)
+  })
+
+  it('does not substitute env key when explicit apiKey is empty', () => {
+    process.env.OPENROUTER_API_KEY = 'sk-or-platform'
+    expect(() =>
+      resolveChatCompletionsRequest({
+        apiKey: '   ',
+        provider: 'openrouter',
+      })
+    ).toThrow('OpenRouter API key is required')
+  })
+
+  it('falls back to env when apiKey is omitted', () => {
+    process.env.OPENROUTER_API_KEY = 'sk-or-platform-key'
+    const headers = openRouterRequestHeaders()
+    expect(headers.Authorization).toBe('Bearer sk-or-platform-key')
+  })
 })
 
 describe('resolveChatModel', () => {
