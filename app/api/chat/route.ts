@@ -17,6 +17,8 @@ import { API_NOT_FOUND } from '@/lib/api-route-codes'
 import { apiError, streamTextResponse } from '@/lib/api'
 import { parseJsonBody, chatPostSchema } from '@/lib/api-schemas'
 import { assertDailyChatQuota } from '@/lib/chat-daily-quota'
+import { getUserApiKey } from '@/lib/byok'
+import { incrementQuota } from '@/lib/quota'
 import {
   assertChatApiRateLimit,
   MAX_CHAT_REQUEST_BODY_BYTES,
@@ -160,10 +162,11 @@ Be more vulnerable, more intense, or more passionate than usual.`
     }
     const messageHistory = historyBuilt.history
 
-    const dailyLimited = await log.span('daily_quota', () =>
-      assertDailyChatQuota(user.id)
+    const dailyGate = await log.span('daily_quota', () =>
+      assertDailyChatQuota(user.id, supabase)
     )
-    if (dailyLimited) return dailyLimited
+    if (!dailyGate.ok) return dailyGate.response
+    const dailyQuota = dailyGate.quota
 
     const rateLimitPromise = log.span('rate_limit', () =>
       assertChatApiRateLimit(user.id, {
@@ -224,9 +227,21 @@ Be more vulnerable, more intense, or more passionate than usual.`
         })
     }
 
+    let llmCredentials: Awaited<ReturnType<typeof getUserApiKey>>
+    try {
+      llmCredentials = await getUserApiKey(user.id)
+    } catch (keyErr) {
+      log.error('llm.api_key_resolve_failed', {
+        message: keyErr instanceof Error ? keyErr.message : String(keyErr),
+      })
+      return apiError('AI service unavailable', 503)
+    }
+
     const chatModel = resolveChatModel(character.is_nsfw)
     const streamOptions = {
       isNsfw: character.is_nsfw,
+      apiKey: llmCredentials.apiKey,
+      provider: llmCredentials.provider,
       signal: mergeChatAbortSignal(req.signal),
       onComplete: (meta: LlmCompletionMeta) => {
         emitLlmMetrics(log, 'llm.stream_complete', meta)
@@ -341,6 +356,9 @@ Be more vulnerable, more intense, or more passionate than usual.`
                 controller.error(new Error('Failed to save assistant reply'))
                 return
               }
+              if (!dailyQuota.isByok && !dailyQuota.isPremium) {
+                await incrementQuota(user.id, supabase)
+              }
               if (idempotencyKey) {
                 await completeChatIdempotency(
                   user.id,
@@ -373,6 +391,9 @@ Be more vulnerable, more intense, or more passionate than usual.`
             }
             controller.error(err as Error)
             return
+          }
+          if (!dailyQuota.isByok && !dailyQuota.isPremium) {
+            await incrementQuota(user.id, supabase)
           }
           if (idempotencyKey) {
             await completeChatIdempotency(

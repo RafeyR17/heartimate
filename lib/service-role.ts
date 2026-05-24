@@ -1,6 +1,8 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { isSupabaseServiceRoleConfigured } from '@/lib/runtime-env'
+import { serverLog } from '@/lib/server-log'
 
 /**
  * Service role bypasses RLS — treat as root DB access.
@@ -26,6 +28,10 @@ let cached: ServiceRoleClient | null = null
 
 /** Lazy singleton — service role key loaded only when ledger/bootstrap runs. */
 export function getServiceRoleClient(): ServiceRoleClient {
+  if (!isSupabaseServiceRoleConfigured()) {
+    serverLog.error('service-role', 'SUPABASE_SERVICE_ROLE_KEY is not configured')
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured')
+  }
   if (!cached) {
     // service role: bootstrap + rate/idempotency ledger RPCs (see module doc)
     cached = createSupabaseAdminClient()

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Heart, MessageCircle } from "lucide-react";
 import { pickPersonaName } from "@/lib/app-types";
 import { fetchHomeRecentChats, fetchHomeTrendingCharacters } from "@/lib/home-data";
+import { resolveCharacterImageSrc } from "@/lib/safe-image-src";
 import { EmptyState } from "@/components/EmptyState";
 import { StreakSync } from "@/components/StreakSync";
 import { HorizontalCarousel, carouselSnapItemClass } from "@/components/ui/horizontal-carousel";
@@ -104,7 +105,7 @@ export default async function HomePage() {
                   boxShadow: '0 0 20px rgba(232,80,122,0.3)',
                 }}
               >
-                <Image src={chat.character?.avatar_url || "/images/characters/lyra.jpg"} alt={chat.character?.name || "Character"} fill className="object-cover object-top" sizes="56px" />
+                <Image src={resolveCharacterImageSrc(chat.character?.avatar_url)} alt={chat.character?.name || "Character"} fill className="object-cover object-top" sizes="56px" />
               </div>
             ))
           ) : (
@@ -146,7 +147,7 @@ export default async function HomePage() {
                 className={`${carouselSnapItemClass} w-[140px] md:w-[200px] rounded-xl border border-white/5 overflow-hidden group hover:border-[rgba(232,80,122,0.3)] hover:-translate-y-0.5 transition-all bg-white/[0.02]`}
               >
                 <div className="relative w-full h-[120px] bg-white/5">
-                  <Image src={chat.character?.avatar_url || "/images/characters/lyra.jpg"} alt={chat.character?.name || "Character"} fill className="object-cover object-top" sizes="200px" />
+                  <Image src={resolveCharacterImageSrc(chat.character?.avatar_url)} alt={chat.character?.name || "Character"} fill className="object-cover object-top" sizes="200px" />
                 </div>
                 <div className="p-3">
                   <h3 className="font-body font-semibold text-[14px] text-white truncate">{chat.character?.name || "Unknown"}</h3>
@@ -218,7 +219,7 @@ export default async function HomePage() {
               <Link key={char.id} href={`/characters/${char.id}`} className="group rounded-2xl border border-white/5 bg-[#0d0a0e] overflow-hidden hover:border-[rgba(232,80,122,0.25)] hover:-translate-y-1 transition-all duration-250 hover:shadow-[0_12px_40px_rgba(232,80,122,0.1)] flex flex-col">
                 <div className="relative w-full aspect-square bg-white/5">
                   <Image 
-                    src={char.avatar_url || "/images/characters/lyra.jpg"} 
+                    src={resolveCharacterImageSrc(char.avatar_url)} 
                     alt={char.name} 
                     fill 
                     className="object-cover object-top" 

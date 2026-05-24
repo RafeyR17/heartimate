@@ -16,8 +16,26 @@ function parseHomeRecentChats(raw: unknown): HomeRecentChat[] {
   return Array.isArray(raw) ? (raw as HomeRecentChat[]) : []
 }
 
+function normalizeTags(tags: unknown): string[] {
+  if (!Array.isArray(tags)) return []
+  return tags.filter((t): t is string => typeof t === 'string')
+}
+
 function parseHomeTrending(raw: unknown): HomeTrendingCharacter[] {
-  return Array.isArray(raw) ? (raw as HomeTrendingCharacter[]) : []
+  if (!Array.isArray(raw)) return []
+  return raw.map((row) => {
+    const r = row as Record<string, unknown>
+    return {
+      id: String(r.id ?? ''),
+      name: String(r.name ?? ''),
+      avatar_url: (r.avatar_url as string | null) ?? null,
+      description: (r.description as string | null) ?? null,
+      tags: normalizeTags(r.tags),
+      likes_count: typeof r.likes_count === 'number' ? r.likes_count : null,
+      chat_count: typeof r.chat_count === 'number' ? r.chat_count : null,
+      is_nsfw: Boolean(r.is_nsfw),
+    }
+  })
 }
 
 export async function fetchHomeRecentChats(

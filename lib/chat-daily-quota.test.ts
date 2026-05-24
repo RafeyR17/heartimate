@@ -9,6 +9,19 @@ import {
   startOfUtcDayIso,
 } from '@/lib/chat-daily-quota'
 
+function mockUserQuotaRow(row: Record<string, unknown>) {
+  vi.mocked(getServiceRoleClient).mockImplementation(() =>
+    createMockSupabaseClient({
+      from: (table) => {
+        if (table !== 'users') {
+          return createQueryChain(async () => ({ data: null, error: null }))
+        }
+        return createQueryChain(async () => ({ data: row, error: null }))
+      },
+    })
+  )
+}
+
 describe('resolveDailyChatLimit', () => {
   const prev = process.env.CHAT_DAILY_MESSAGE_LIMIT
 
@@ -62,49 +75,55 @@ describe('assertDailyChatQuota', () => {
   })
 
   it('allows when under the cap', async () => {
-    vi.mocked(getServiceRoleClient).mockImplementation(() =>
-      createMockSupabaseClient({
-        from: (table) => {
-          if (table !== 'chat_rate_events') {
-            return createQueryChain(async () => ({ data: null, error: null }))
-          }
-          return createQueryChain(async () => ({ data: null, error: null, count: 19 }))
-        },
-      })
-    )
-    expect(await assertDailyChatQuota('user-1')).toBeNull()
+    mockUserQuotaRow({
+      daily_msg_count: 19,
+      msg_reset_at: new Date().toISOString(),
+      is_byok: false,
+      is_premium: false,
+    })
+    expect((await assertDailyChatQuota('user-1')).ok).toBe(true)
+  })
+
+  it('allows BYOK users', async () => {
+    mockUserQuotaRow({
+      daily_msg_count: 99,
+      msg_reset_at: new Date().toISOString(),
+      is_byok: true,
+      is_premium: false,
+    })
+    expect((await assertDailyChatQuota('user-1')).ok).toBe(true)
   })
 
   it('returns 429 when at the cap', async () => {
-    vi.mocked(getServiceRoleClient).mockImplementation(() =>
-      createMockSupabaseClient({
-        from: (table) => {
-          if (table !== 'chat_rate_events') {
-            return createQueryChain(async () => ({ data: null, error: null }))
-          }
-          return createQueryChain(async () => ({ data: null, error: null, count: 20 }))
-        },
-      })
-    )
-    const res = await assertDailyChatQuota('user-1')
-    expect(res?.status).toBe(429)
-    const body = await res!.json()
-    expect(body.code).toBe('daily_chat_limit')
+    mockUserQuotaRow({
+      daily_msg_count: 20,
+      msg_reset_at: new Date().toISOString(),
+      is_byok: false,
+      is_premium: false,
+    })
+    const result = await assertDailyChatQuota('user-1')
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.response.status).toBe(429)
+    const body = await result.response.json()
+    expect(body.code).toBe('quota_exceeded')
     expect(body.limit).toBe(20)
+    expect(body.upgradeUrl).toBe('/settings')
   })
 
-  it('returns 503 when count fails', async () => {
+  it('returns 503 when quota fetch fails', async () => {
     vi.mocked(getServiceRoleClient).mockImplementation(() =>
       createMockSupabaseClient({
         from: () =>
           createQueryChain(async () => ({
             data: null,
             error: { message: 'db down' },
-            count: null,
           })),
       })
     )
-    const res = await assertDailyChatQuota('user-1')
-    expect(res?.status).toBe(503)
+    const result = await assertDailyChatQuota('user-1')
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.response.status).toBe(503)
   })
 })

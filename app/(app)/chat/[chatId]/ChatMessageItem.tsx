@@ -8,6 +8,7 @@ import { iconTouchClass } from '@/lib/touch-targets'
 import { REACTION_KEYS, type Message, isUserRole } from './chat-types'
 import { useChatSession } from './ChatSessionContext'
 import { formatMessage, TimestampHover, type TouchHandlers } from './message-ui'
+import { ChatImageMessage, isImageMessage } from '@/components/chat/ChatImageMessage'
 
 export interface ChatMessageItemProps {
   msg: Message
@@ -37,10 +38,29 @@ export default function ChatMessageItem({ msg, index, touchHandlers }: ChatMessa
     deleteMessageConfirmed,
     toggleReaction,
     regenerate,
+    setFullscreenImage,
   } = useChatSession()
 
   const isUser = isUserRole(msg.role)
   const isExiting = exitingIds.has(msg.id)
+
+  if (!isUser && isImageMessage(msg)) {
+    return (
+      <div
+        className={cn(
+          'msg-wrap transition-all duration-300 ease-out flex w-full min-w-0 justify-start',
+          isExiting ? 'overflow-hidden max-h-0 opacity-0 my-0 py-0' : 'max-h-[2000px] opacity-100'
+        )}
+      >
+        <ChatImageMessage
+          msg={msg}
+          character={character}
+          touchHandlers={touchHandlers}
+          onOpenFullscreen={setFullscreenImage}
+        />
+      </div>
+    )
+  }
   const isLastAssistant = !isUser && index === lastAssistantIndex
   const showRegen = isLastAssistant && !isStreaming
 

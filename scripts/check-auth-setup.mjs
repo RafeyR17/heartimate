@@ -54,6 +54,22 @@ async function main() {
   const clerkSecret = requireEnv('CLERK_SECRET_KEY')
 
   if (errors.length) {
+    const missingEnv = errors.some((e) => e.startsWith('Missing '))
+    if (missingEnv) {
+      const hasLocal = existsSync(resolve(process.cwd(), '.env.local'))
+      const hasEnv = existsSync(resolve(process.cwd(), '.env'))
+      if (!hasLocal && !hasEnv) {
+        console.error(
+          '✗ No .env.local (or .env) in repo root — npm run auth:verify needs local secrets.\n' +
+            '  Copy from Vercel: Project → Settings → Environment Variables,\n' +
+            '  or run: vercel env pull .env.local\n'
+        )
+      } else if (!hasLocal) {
+        console.error(
+          '✗ Keys not found after loading .env — add them to .env.local (gitignored).\n'
+        )
+      }
+    }
     errors.forEach((e) => console.error('✗', e))
     process.exit(1)
   }

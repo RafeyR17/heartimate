@@ -23,6 +23,7 @@ const isProtectedRoute = createRouteMatcher([
   '/characters/create(.*)',
   '/characters/(.*)/edit(.*)',
   '/profile(.*)',
+  '/settings(.*)',
   '/favorites(.*)',
   '/personas(.*)',
   '/onboarding(.*)',

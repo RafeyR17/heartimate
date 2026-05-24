@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { CameraIcon, ChevronDown, X } from 'lucide-react'
 import { AvatarImage } from '@/components/ui/avatar-image'
+import { ImageGenerator } from '@/components/ImageGenerator'
 import { AVAILABLE_TAGS } from './constants'
 import { inputClass, labelClass, sectionHeadingClass } from './form-styles'
 import type { CharacterFormState, CharacterFormUpdate } from './types'
@@ -18,6 +19,7 @@ type IdentitySectionProps = {
   dropdownRef: React.RefObject<HTMLDivElement | null>
   onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   onRemoveAvatar: (e: React.MouseEvent) => void
+  onAvatarGenerated: (url: string) => void
   onAddTag: (tag: string) => void
   onRemoveTag: (tag: string) => void
 }
@@ -33,6 +35,7 @@ export function IdentitySection({
   dropdownRef,
   onAvatarChange,
   onRemoveAvatar,
+  onAvatarGenerated,
   onAddTag,
   onRemoveTag,
 }: IdentitySectionProps) {
@@ -80,12 +83,34 @@ export function IdentitySection({
           )}
         </div>
         <input
+          id="avatar-upload"
           type="file"
           ref={fileInputRef}
           onChange={onAvatarChange}
           accept="image/*"
           className="hidden"
         />
+
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+          <label
+            htmlFor="avatar-upload"
+            className="inline-flex items-center gap-1.5 rounded-[8px] border border-white/10 bg-white/[0.04] px-3.5 py-2 text-[12px] font-medium text-white/70 cursor-pointer hover:bg-white/[0.08] transition-colors"
+          >
+            Upload
+          </label>
+          <ImageGenerator
+            characterData={{
+              name: form.name,
+              description: form.description,
+              personality: form.personality,
+              tags: form.tags,
+              gender: form.gender,
+            }}
+            currentImage={form.avatarPreview}
+            uploadInputRef={fileInputRef}
+            onImageSelected={onAvatarGenerated}
+          />
+        </div>
       </div>
 
       <div className="mb-6">

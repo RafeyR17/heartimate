@@ -101,12 +101,41 @@ export function resolveChatGenerationParams(
   }
 }
 
-export function openRouterRequestHeaders(): Record<string, string> {
+export function openRouterRequestHeaders(apiKey?: string): Record<string, string> {
+  const key = apiKey?.trim() || process.env.OPENROUTER_API_KEY
+  if (!key) {
+    throw new Error('OPENROUTER_API_KEY is not configured')
+  }
   return {
-    Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+    Authorization: `Bearer ${key}`,
     'Content-Type': 'application/json',
     'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
     'X-Title': 'Heartimate',
+  }
+}
+
+export function openAiRequestHeaders(apiKey: string): Record<string, string> {
+  return {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  }
+}
+
+export function resolveChatCompletionsRequest(
+  options?: Pick<StreamChatOptions, 'apiKey' | 'provider'>
+): { url: string; headers: Record<string, string> } {
+  const provider = options?.provider ?? 'openrouter'
+  if (provider === 'openai') {
+    const key = options?.apiKey?.trim()
+    if (!key) throw new Error('OpenAI API key is required')
+    return {
+      url: 'https://api.openai.com/v1/chat/completions',
+      headers: openAiRequestHeaders(key),
+    }
+  }
+  return {
+    url: OPENROUTER_CHAT_URL,
+    headers: openRouterRequestHeaders(options?.apiKey),
   }
 }
 
@@ -119,10 +148,15 @@ export function mergeChatAbortSignal(
   return AbortSignal.any([clientSignal, timeout])
 }
 
+export type LlmProvider = 'openrouter' | 'openai'
+
 export type StreamChatOptions = {
   model?: string
   signal?: AbortSignal
   isNsfw?: boolean
+  /** Override app OpenRouter key (BYOK). */
+  apiKey?: string
+  provider?: LlmProvider
   /** Called when the stream ends (success or client abort after partial read). */
   onComplete?: (meta: LlmCompletionMeta) => void
 }
@@ -183,23 +217,29 @@ export async function streamChat(
   options?: StreamChatOptions
 ): Promise<ReadableStream<Uint8Array>> {
   const isNsfw = options?.isNsfw ?? false
-  const candidates = options?.model
-    ? [options.model]
-    : resolveChatModelCandidates(isNsfw)
+  const provider = options?.provider ?? 'openrouter'
+  const candidates =
+    provider === 'openai'
+      ? [resolveChatModel(false)]
+      : options?.model
+        ? [options.model]
+        : resolveChatModelCandidates(isNsfw)
+  const { url, headers } = resolveChatCompletionsRequest(options)
   const startedAt = Date.now()
   let lastError: Error | null = null
 
   for (let i = 0; i < candidates.length; i++) {
-    const model = candidates[i]!
+    const model =
+      provider === 'openai' ? 'gpt-4o-mini' : candidates[i]!
     const requestBody = buildOpenRouterChatRequestBody(messages, systemPrompt, {
       ...options,
       model,
       isNsfw,
     })
 
-    const response = await fetch(OPENROUTER_CHAT_URL, {
+    const response = await fetch(url, {
       method: 'POST',
-      headers: openRouterRequestHeaders(),
+      headers,
       body: JSON.stringify(requestBody),
       signal: options?.signal,
     })

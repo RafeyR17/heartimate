@@ -10,6 +10,8 @@ import { setNewUserHint } from "@/lib/client-storage";
 import { useToast } from "@/components/ToastProvider";
 import { OnboardingPersonaStep } from "@/components/onboarding/OnboardingPersonaStep";
 import { OnboardingRevealStep } from "@/components/onboarding/OnboardingRevealStep";
+import { OnboardingStarterImage } from "@/components/onboarding/OnboardingStarterImage";
+import { getClerkOAuthRedirectUrls } from "@/lib/clerk-oauth-redirect";
 
 const KINKS = [
   "Romance", "Slow Burn", "Forbidden Love", "Childhood Friends", "Hurt/Comfort",
@@ -25,6 +27,8 @@ type OnboardingStarter = {
   img: string;
   teaser: string;
   msg: string;
+  description?: string;
+  tags?: string[];
 };
 
 export default function OnboardingPage() {
@@ -81,11 +85,13 @@ export default function OnboardingPage() {
   }
 
   const handleOAuth = () => {
-    if (!isLoaded) return;
-    signIn.authenticateWithRedirect({
+    if (!isLoaded || !signIn) return;
+    const { redirectUrl, redirectUrlComplete } =
+      getClerkOAuthRedirectUrls("/onboarding");
+    void signIn.authenticateWithRedirect({
       strategy: "oauth_google",
-      redirectUrl: "/sso-callback",
-      redirectUrlComplete: "/onboarding",
+      redirectUrl,
+      redirectUrlComplete,
     });
   };
 
@@ -399,7 +405,7 @@ export default function OnboardingPage() {
                     }
                   `}
                 >
-                  <Image src={char.img} alt={char.name} fill className="object-cover object-top pointer-events-none" sizes="(max-width: 768px) 200px, 240px" />
+                  <OnboardingStarterImage key={char.id} starter={char} isSelected={isSel} />
                   <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, #080608 0%, rgba(8,6,8,0.9) 35%, transparent 65%)' }} />
                   
                   <div className="absolute bottom-[20px] left-[16px] right-[16px] pointer-events-none">

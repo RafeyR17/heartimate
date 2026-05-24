@@ -28,6 +28,10 @@ export const API_RATE_LIMITS = {
   onboarding: { max: 5, windowMs: 3_600_000 },
   user_update: { max: 20, windowMs: API_RATE_LIMIT_WINDOW_MS },
   update_streak: { max: 5, windowMs: API_RATE_LIMIT_WINDOW_MS },
+  byok_save: { max: 10, windowMs: 3_600_000 },
+  byok_remove: { max: 10, windowMs: 3_600_000 },
+  generate_image: { max: 30, windowMs: 3_600_000 },
+  chat_image: { max: 30, windowMs: 3_600_000 },
 } as const
 
 export type ApiRateLimitAction = keyof typeof API_RATE_LIMITS

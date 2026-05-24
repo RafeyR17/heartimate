@@ -20,6 +20,7 @@ import {
   formatStreamOutcomeDisplay,
   readChatPlainTextStream,
 } from '@/lib/chat-stream-client'
+import { parseChatImageCommand } from '@/lib/chat-image-command'
 import {
   type ChatCharacter,
   type Message,
@@ -39,6 +40,7 @@ export interface UseChatSendOptions {
   markAssistantSpecial: (messageId: string, isSpecial: boolean) => void
   clearSpecialStream: () => void
   onAutoRead?: (messageId: string, content: string) => void
+  onOpenImagePanel?: (prefill: string) => void
 }
 
 export function useChatSend({
@@ -54,7 +56,13 @@ export function useChatSend({
   markAssistantSpecial,
   clearSpecialStream,
   onAutoRead,
-}: UseChatSendOptions) {
+  onQuotaExceeded,
+  refreshQuota,
+  onOpenImagePanel,
+}: UseChatSendOptions & {
+  onQuotaExceeded?: (resetIn?: string) => void
+  refreshQuota?: () => void
+}) {
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
   const [typingGate, setTypingGate] = useState(false)
@@ -79,6 +87,9 @@ export function useChatSend({
 
   const showChatFailure = useCallback(
     (display: ChatApiErrorDisplay, tempUserMsg: Message | null) => {
+      if (display.showQuotaModal) {
+        onQuotaExceeded?.(display.resetIn)
+      }
       notifyApiError(display)
       if (!display.inlineMarkdown) return
       const errorMsg: Message = {
@@ -93,7 +104,7 @@ export function useChatSend({
         errorMsg,
       ])
     },
-    [notifyApiError, setMessages]
+    [notifyApiError, onQuotaExceeded, setMessages]
   )
 
   useEffect(() => {
@@ -125,6 +136,13 @@ export function useChatSend({
     async (textToSend?: string, opts?: { omitUserPersist?: boolean }) => {
       const finalMsg = (textToSend ?? input).trim()
       if (!finalMsg || isStreaming) return
+
+      const imageCommand = parseChatImageCommand(finalMsg)
+      if (imageCommand !== null) {
+        setInput('')
+        onOpenImagePanel?.(imageCommand)
+        return
+      }
 
       const omitUserPersist = opts?.omitUserPersist === true
 
@@ -221,6 +239,7 @@ export function useChatSend({
           markAssistantSpecial(lastAssistant.id, specialReply)
           onAutoRead?.(lastAssistant.id, lastAssistant.content)
         }
+        refreshQuota?.()
       } catch (err: unknown) {
         if (err instanceof ApiRequestError) {
           showChatFailure(err.display, tempUserMsg)
@@ -247,6 +266,7 @@ export function useChatSend({
     [
       input,
       isStreaming,
+      onOpenImagePanel,
       chatId,
       character.name,
       stickBottomRef,
@@ -258,6 +278,7 @@ export function useChatSend({
       markAssistantSpecial,
       clearSpecialStream,
       onAutoRead,
+      refreshQuota,
     ]
   )
 

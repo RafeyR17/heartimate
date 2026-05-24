@@ -16,9 +16,12 @@ export const API_ERROR_CODES = {
   RATE_LIMITED: 'RATE_LIMITED',
   /** Daily POST /api/chat quota (beta). */
   DAILY_CHAT_LIMIT: 'daily_chat_limit',
+  /** Free-tier daily cap (users.daily_msg_count). */
+  QUOTA_EXCEEDED: 'quota_exceeded',
   DUPLICATE_REQUEST: 'DUPLICATE_REQUEST',
   CHAT_DISABLED: 'CHAT_DISABLED',
   SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+  MIGRATION_REQUIRED: 'migration_required',
   AI_UNAVAILABLE: 'AI_UNAVAILABLE',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const

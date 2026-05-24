@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { apiFetch } from '@/lib/api-client'
 import {
   chatMessagesSnapshotKey,
   chatRelationshipSnapshotKey,
@@ -12,6 +13,7 @@ import { useChatMessageOps } from './useChatMessageOps'
 import { useChatMessages } from './useChatMessages'
 import { useChatRelationship } from './useChatRelationship'
 import { useChatSend } from './useChatSend'
+import { useChatImage } from './useChatImage'
 
 export interface UseChatStreamOptions {
   chatId: string
@@ -59,6 +61,42 @@ export function useChatStream({
 
   const composer = useChatComposerState()
 
+  const [quotaInfo, setQuotaInfo] = useState<{
+    remaining: number
+    isByok: boolean
+  } | null>(null)
+  const [quotaModalOpen, setQuotaModalOpen] = useState(false)
+  const [quotaModalResetIn, setQuotaModalResetIn] = useState<string | undefined>()
+
+  const refreshQuota = useCallback(() => {
+    void apiFetch<{
+      remaining: number
+      hasByok: boolean
+    }>('/api/users/api-key', { cache: 'no-store' }).then((result) => {
+      if (!result.ok) return
+      setQuotaInfo({
+        remaining: result.data.remaining,
+        isByok: result.data.hasByok,
+      })
+    })
+  }, [])
+
+  useEffect(() => {
+    refreshQuota()
+  }, [refreshQuota, chatId])
+
+  const onQuotaExceeded = useCallback((resetIn?: string) => {
+    setQuotaModalResetIn(resetIn)
+    setQuotaModalOpen(true)
+    refreshQuota()
+  }, [refreshQuota])
+
+  const image = useChatImage(
+    messagesState.setMessages,
+    stickBottomRef,
+    refreshQuota
+  )
+
   const send = useChatSend({
     chatId,
     character,
@@ -72,6 +110,9 @@ export function useChatStream({
     markAssistantSpecial: relationship.markAssistantSpecial,
     clearSpecialStream: relationship.clearSpecialStream,
     onAutoRead,
+    onQuotaExceeded,
+    refreshQuota,
+    onOpenImagePanel: image.openImagePanel,
   })
 
   const actions = useChatMessageActions({
@@ -183,5 +224,18 @@ export function useChatStream({
     hasMoreOlder: messagesState.hasMoreOlder,
     loadingOlder: messagesState.loadingOlder,
     loadOlderMessages: messagesState.loadOlderMessages,
+    quotaInfo,
+    quotaModalOpen,
+    setQuotaModalOpen,
+    quotaModalResetIn,
+    setQuotaModalResetIn,
+    refreshQuota,
+    showImagePanel: image.showImagePanel,
+    closeImagePanel: image.closeImagePanel,
+    openImagePanel: image.openImagePanel,
+    prefilledImageRequest: image.prefilledRequest,
+    handleImageMessageSent: image.handleImageMessageSent,
+    fullscreenImage: image.fullscreenImage,
+    setFullscreenImage: image.setFullscreenImage,
   }
 }

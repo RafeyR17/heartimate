@@ -15,7 +15,12 @@ import Link from "next/link";
 import { capturePostHog, identifyPostHog } from "@/lib/posthog-browser";
 import { mapClerkError } from "@/lib/auth-errors";
 import { stripCredentialQueryFromUrl } from "@/lib/auth-query-strip";
-import type { ClerkSignInSecondFactor } from "@/lib/clerk-sign-in-types";
+import {
+  isEmailCodeFactor,
+  type ClerkSignInSecondFactor,
+} from "@/lib/clerk-sign-in-types";
+import { ClerkCaptcha } from "@/components/ClerkCaptcha";
+import { getClerkOAuthRedirectUrls } from "@/lib/clerk-oauth-redirect";
 
 function LoginPageContent() {
   const { isSignedIn } = useAuth();
@@ -49,6 +54,58 @@ function LoginPageContent() {
   const [mfaStrategies, setMfaStrategies] = useState<ClerkSignInSecondFactor[]>([]);
   const [selectedMfaStrategy, setSelectedMfaStrategy] = useState<ClerkSignInSecondFactor | null>(null);
 
+  async function finishSignIn(sessionId: string | null) {
+    if (!sessionId || !setActive) {
+      setError("Sign-in could not be completed. Please try again.");
+      return;
+    }
+    await setActive({
+      session: sessionId,
+      navigate: async ({ session, decorateUrl }) => {
+        if (session?.currentTask) {
+          setError("Additional account setup is required. Please try again.");
+          return;
+        }
+        const url = decorateUrl(postLoginPath);
+        if (url.startsWith("http")) {
+          window.location.href = url;
+        } else {
+          router.push(url);
+        }
+      },
+    });
+    void identifyPostHog(sessionId);
+    void capturePostHog("user_logged_in", { method: "email" });
+  }
+
+  async function beginSecondFactor(
+    factors: ClerkSignInSecondFactor[]
+  ): Promise<boolean> {
+    if (!signIn || factors.length === 0) return false;
+
+    const emailCode = factors.find(isEmailCodeFactor);
+    const first = emailCode ?? factors[0];
+    setMfaStrategies(factors);
+    setSelectedMfaStrategy(first);
+    setVerifyingMfa(true);
+    setMfaCode("");
+
+    if (isEmailCodeFactor(first)) {
+      await signIn.prepareSecondFactor({
+        strategy: "email_code",
+        emailAddressId: first.emailAddressId,
+      });
+      return true;
+    }
+
+    if (first.strategy === "phone_code") {
+      await signIn.prepareSecondFactor({ strategy: "phone_code" });
+      return true;
+    }
+
+    return true;
+  }
+
   async function handleLogin() {
     if (!isLoaded || !signIn) {
       setError("Still loading — please try again in a moment.");
@@ -58,30 +115,27 @@ function LoginPageContent() {
       setLoading(true);
       setError("");
 
+      const identifier = email.trim().toLowerCase();
+      if (!identifier || !password) {
+        setError("Email and password are required.");
+        return;
+      }
+
       const result = await signIn.create({
-        identifier: email,
-        password: password,
+        identifier,
+        password,
       });
 
       if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        if (result.createdSessionId) {
-          void identifyPostHog(result.createdSessionId);
-        }
-        void capturePostHog('user_logged_in', { method: 'email' });
-        router.push(postLoginPath);
+        await finishSignIn(result.createdSessionId);
       } else if (result.status === "needs_second_factor") {
-        const factors = (result.supportedSecondFactors ?? []) as ClerkSignInSecondFactor[];
-        setMfaStrategies(factors);
-
-        const firstStrategy = factors[0];
-        setSelectedMfaStrategy(firstStrategy);
-        setVerifyingMfa(true);
-
-        if (firstStrategy?.strategy === "phone_code") {
-          await signIn.prepareSecondFactor({
-            strategy: "phone_code",
-          });
+        const factors = (result.supportedSecondFactors ??
+          []) as ClerkSignInSecondFactor[];
+        const started = await beginSecondFactor(factors);
+        if (!started) {
+          setError(
+            "Extra verification is required but no supported method was found."
+          );
         }
       } else {
         setError("Sign-in could not be completed. Please try again.");
@@ -101,14 +155,21 @@ function LoginPageContent() {
       setLoading(true);
       setError("");
 
-      const result = await signIn.attemptSecondFactor({
-        strategy: selectedMfaStrategy.strategy,
-        code: mfaCode,
-      });
+      const params =
+        selectedMfaStrategy.strategy === "email_code"
+          ? {
+              strategy: "email_code" as const,
+              code: mfaCode,
+            }
+          : {
+              strategy: selectedMfaStrategy.strategy,
+              code: mfaCode,
+            };
+
+      const result = await signIn.attemptSecondFactor(params);
 
       if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        router.push(postLoginPath);
+        await finishSignIn(result.createdSessionId);
       } else {
         setError("Verification could not be completed. Please try again.");
       }
@@ -124,32 +185,43 @@ function LoginPageContent() {
     setMfaCode("");
     setError("");
     
-    if (strategyObj.strategy === "phone_code") {
-      try {
-        setLoading(true);
-        if (!signIn) return;
+    try {
+      setLoading(true);
+      if (!signIn) return;
+      if (isEmailCodeFactor(strategyObj)) {
         await signIn.prepareSecondFactor({
-          strategy: "phone_code",
+          strategy: "email_code",
+          emailAddressId: strategyObj.emailAddressId,
         });
-      } catch (err: unknown) {
-        setError(mapClerkError(err, "Could not send verification code."));
-      } finally {
-        setLoading(false);
+      } else if (strategyObj.strategy === "phone_code") {
+        await signIn.prepareSecondFactor({ strategy: "phone_code" });
       }
+    } catch (err: unknown) {
+      setError(mapClerkError(err, "Could not send verification code."));
+    } finally {
+      setLoading(false);
     }
   }
 
   async function handleGoogle() {
     if (!isLoaded || !signIn) return;
     try {
-      void capturePostHog('user_logged_in_oauth', { provider: 'oauth_google' });
+      setError("");
+      void capturePostHog("user_logged_in_oauth", { provider: "oauth_google" });
+      const { redirectUrl, redirectUrlComplete } =
+        getClerkOAuthRedirectUrls(postLoginPath);
       await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
-        redirectUrlComplete: postLoginPath,
+        redirectUrl,
+        redirectUrlComplete,
       });
-    } catch {
-      setError("Google sign-in failed. Please try again.");
+    } catch (err: unknown) {
+      setError(
+        mapClerkError(
+          err,
+          "Google sign-in failed. Enable Google in the Clerk Dashboard and try again."
+        )
+      );
     }
   }
 
@@ -216,9 +288,13 @@ function LoginPageContent() {
             </Link>
 
             <h1 className="font-heading text-[28px] md:text-4xl text-white mb-2 text-center md:text-left">
-              Two-Factor Auth
+              {selectedMfaStrategy?.strategy === "email_code"
+                ? "Verify your email"
+                : "Two-Factor Auth"}
             </h1>
             <p className="font-body font-light text-muted mb-8">
+              {selectedMfaStrategy?.strategy === "email_code" &&
+                `We sent a verification code to ${selectedMfaStrategy.safeIdentifier || "your email"}.`}
               {selectedMfaStrategy?.strategy === "totp" && "Enter the 6-digit code from your authenticator app."}
               {selectedMfaStrategy?.strategy === "phone_code" && `We sent a code to your phone ending in ${selectedMfaStrategy.safePhoneNumber || ""}.`}
               {selectedMfaStrategy?.strategy === "backup_code" && "Enter one of your emergency backup codes."}
@@ -243,16 +319,16 @@ function LoginPageContent() {
                 />
               </div>
 
-              {error && <p className="text-error">{error}</p>}
+            {error && <p className="text-error">{error}</p>}
 
-              <button
-                type="submit"
-                disabled={loading || mfaCode.length < 4}
-                className="btn-primary w-full uppercase tracking-wider"
-              >
-                {loading ? "Verifying..." : "Verify & Enter →"}
-              </button>
-            </form>
+            <button
+              type="submit"
+              disabled={loading || mfaCode.length < 4}
+              className="btn-primary w-full uppercase tracking-wider"
+            >
+              {loading ? "Verifying..." : "Verify & Enter →"}
+            </button>
+          </form>
 
             {/* Alternative strategies selection */}
             {mfaStrategies.length > 1 && (
@@ -264,7 +340,8 @@ function LoginPageContent() {
                   {mfaStrategies.map((strat, idx) => {
                     if (strat.strategy === selectedMfaStrategy?.strategy) return null;
                     let label = "";
-                    if (strat.strategy === "totp") label = "Authenticator App";
+                    if (strat.strategy === "email_code") label = "Email code";
+                    else if (strat.strategy === "totp") label = "Authenticator App";
                     else if (strat.strategy === "phone_code") label = `SMS to ${strat.safePhoneNumber}`;
                     else if (strat.strategy === "backup_code") label = "Backup Code";
                     
@@ -467,14 +544,13 @@ function LoginPageContent() {
               </button>
             </div>
 
+            <ClerkCaptcha />
+
             {error && <p className="text-error">{error}</p>}
 
             <button
-              type="button"
+              type="submit"
               disabled={loading || !isLoaded}
-              onClick={() => {
-                void handleLogin();
-              }}
               className="btn-primary w-full mt-2 uppercase tracking-wider"
             >
               {!isLoaded ? "Loading..." : loading ? "Signing in..." : "ENTER HEARTIMATE →"}
@@ -493,7 +569,6 @@ function LoginPageContent() {
         </div>
       </div>
 
-      <div id="clerk-captcha" />
     </div>
   );
 }

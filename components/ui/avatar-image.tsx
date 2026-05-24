@@ -12,7 +12,11 @@ type AvatarImageProps = {
 }
 
 function needsUnoptimized(src: string): boolean {
-  return src.startsWith('blob:') || src.startsWith('data:')
+  return (
+    src.startsWith('blob:') ||
+    src.startsWith('data:') ||
+    src.includes('pollinations.ai')
+  )
 }
 
 export function AvatarImage({

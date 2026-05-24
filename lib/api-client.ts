@@ -14,6 +14,8 @@ export type ParsedApiError = {
   error: string
   retryAfter?: number
   code?: string
+  upgradeUrl?: string
+  resetIn?: string
 }
 
 export type ApiFetchSuccess<T> = { ok: true; data: T }
@@ -24,6 +26,8 @@ export type ApiFetchFailure = {
   status: number
   retryAfter?: number
   code?: string
+  upgradeUrl?: string
+  resetIn?: string
 }
 
 export type ApiFetchResult<T> = ApiFetchSuccess<T> | ApiFetchFailure
@@ -42,6 +46,9 @@ export type ChatApiErrorDisplay = {
   toastTitle: string
   toastMessage?: string
   redirectToLogin?: boolean
+  showQuotaModal?: boolean
+  upgradeUrl?: string
+  resetIn?: string
 }
 
 export class ApiRequestError extends Error {
@@ -90,7 +97,15 @@ export function parsedFromApiJson(res: Response, data: ApiJson): ParsedApiError 
       : res.statusText || 'Request failed'
   const code =
     typeof data.code === 'string' && data.code.trim() ? data.code.trim() : undefined
-  return { status: res.status, error, retryAfter, code }
+  const upgradeUrl =
+    typeof data.upgradeUrl === 'string' && data.upgradeUrl.trim()
+      ? data.upgradeUrl.trim()
+      : undefined
+  const resetIn =
+    typeof data.resetIn === 'string' && data.resetIn.trim()
+      ? data.resetIn.trim()
+      : undefined
+  return { status: res.status, error, retryAfter, code, upgradeUrl, resetIn }
 }
 
 /** Read JSON error envelope from a failed API response (e.g. POST /api/chat when !ok). */
@@ -151,12 +166,18 @@ export function formatChatApiError(parsed: ParsedApiError): ChatApiErrorDisplay 
         toastMessage: 'Shorten your message and try again.',
       }
     case 429: {
-      if (parsed.code === 'daily_chat_limit') {
+      if (
+        parsed.code === 'daily_chat_limit' ||
+        parsed.code === 'quota_exceeded'
+      ) {
         const fallback = parsed.error || 'Daily message limit reached'
         return {
           inlineMarkdown: `*${fallback}*`,
           toastTitle: 'Daily limit reached',
           toastMessage: fallback,
+          showQuotaModal: true,
+          upgradeUrl: parsed.upgradeUrl ?? '/settings',
+          resetIn: parsed.resetIn,
         }
       }
       const sec = parsed.retryAfter ?? 60
@@ -217,6 +238,8 @@ export async function apiFetch<T = ApiJson>(
         status: parsed.status,
         retryAfter: parsed.retryAfter,
         code: parsed.code,
+        upgradeUrl: parsed.upgradeUrl,
+        resetIn: parsed.resetIn,
       }
     }
     return { ok: true, data: data as T }

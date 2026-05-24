@@ -26,6 +26,8 @@ Apply migrations in filename order (`20240518_*` → `20240533_*`) on a fresh pr
 | `20240601_chat_last_message_preview.sql` | `chats.last_message_preview` / `last_message_role` denormalization |
 | `20240602_purge_rate_ledgers.sql` | `purge_rate_ledgers()` — single RPC for daily cron |
 | `20240603_perf_rpc_hot_paths.sql` | `get_sidebar_context`, `get_chat_turn_context` — one round-trip for layout + chat turn |
+| `20240611_byok_and_message_quota.sql` | BYOK columns on `users`, `daily_msg_count`, `msg_reset_at`, `increment_message_count` RPC |
+| `20240612_chat_image_messages.sql` | `messages.message_type` / `image_url` / `image_prompt`; `insert_chat_image_message` RPC (in-chat Pollinations images) |
 
 ## Clerk + Supabase (API routes)
 

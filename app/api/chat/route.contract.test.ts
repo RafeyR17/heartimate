@@ -30,6 +30,22 @@ vi.mock('@/lib/posthog-server', () => ({
   getPostHogClient: () => ({ capture: vi.fn(), shutdown: vi.fn() }),
 }))
 
+vi.mock('@/lib/byok', () => ({
+  getUserApiKey: vi.fn(async () => ({
+    apiKey: 'test-openrouter-key',
+    provider: 'openrouter' as const,
+    isByok: false,
+  })),
+}))
+
+vi.mock('@/lib/quota', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/quota')>()
+  return {
+    ...actual,
+    incrementQuota: vi.fn(async () => undefined),
+  }
+})
+
 vi.mock('@/lib/chat-moderation', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/chat-moderation')>()
   return {
@@ -112,7 +128,26 @@ describe('POST /api/chat contract', () => {
     })
     vi.mocked(getServiceRoleClient).mockImplementation(() =>
       createMockSupabaseClient({
-        rpc: async () => ({ data: true, error: null }),
+        from: (table) => {
+          if (table === 'users') {
+            return createQueryChain(async () => ({
+              data: {
+                daily_msg_count: 0,
+                msg_reset_at: new Date().toISOString(),
+                is_byok: false,
+                is_premium: false,
+              },
+              error: null,
+            }))
+          }
+          return createQueryChain(async () => ({ data: null, error: null }))
+        },
+        rpc: async (fn) => {
+          if (fn === 'increment_message_count') {
+            return { data: null, error: null }
+          }
+          return { data: true, error: null }
+        },
       })
     )
   })

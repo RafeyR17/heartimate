@@ -1,13 +1,22 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { ArrowUp, X } from 'lucide-react'
+import { ArrowUp, Camera, X } from 'lucide-react'
 import { iconTouchClass } from '@/lib/touch-targets'
 import { syncChatOverlayBottom } from '@/lib/chat-viewport-sync'
 import { useChatSession } from './ChatSessionContext'
 
 export default function ChatComposer() {
-  const { character, input, setInput, isStreaming, sendMessage, cancelStream } = useChatSession()
+  const {
+    character,
+    input,
+    setInput,
+    sendMessage,
+    cancelStream,
+    quotaInfo,
+    isStreaming,
+    openImagePanel,
+  } = useChatSession()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -51,7 +60,35 @@ export default function ChatComposer() {
       className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/[0.08] bg-[rgba(8,6,8,0.95)] backdrop-blur-[20px] transition-transform duration-75 md:relative md:transform-none md:flex-shrink-0"
       style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}
     >
-      <div className="w-full flex items-end gap-2 px-2 py-2 sm:px-3 md:max-w-4xl md:mx-auto md:p-4">
+      <div className="w-full flex flex-col gap-1.5 px-2 py-2 sm:px-3 md:max-w-4xl md:mx-auto md:p-4">
+        {quotaInfo && (
+          <div className="flex items-center gap-2 px-1">
+            {quotaInfo.isByok ? (
+              <span className="font-body text-[10px] uppercase tracking-wide text-green-400 border border-green-500/25 rounded-full px-2 py-0.5">
+                ∞ Unlimited
+              </span>
+            ) : quotaInfo.remaining === 0 ? (
+              <span className="font-body text-[10px] uppercase tracking-wide text-rose border border-rose/30 rounded-full px-2 py-0.5">
+                Daily limit reached
+              </span>
+            ) : quotaInfo.remaining <= 5 ? (
+              <span className="font-body text-[10px] uppercase tracking-wide text-amber-400 border border-amber-500/25 rounded-full px-2 py-0.5">
+                {quotaInfo.remaining} messages left today
+              </span>
+            ) : null}
+          </div>
+        )}
+        <div className="w-full flex items-end gap-2">
+        <button
+          type="button"
+          onClick={() => openImagePanel()}
+          disabled={isStreaming}
+          title="Generate image"
+          aria-label="Generate image"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-white/[0.08] bg-white/[0.04] text-white/40 transition-colors hover:border-[#e8507a]/40 hover:text-[#e8507a] disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Camera size={18} />
+        </button>
         <label htmlFor="chat-composer-input" className="sr-only">
           Message to {character.name}
         </label>
@@ -95,6 +132,7 @@ export default function ChatComposer() {
             <ArrowUp size={18} className="text-white" />
           </button>
         )}
+        </div>
       </div>
     </footer>
   )

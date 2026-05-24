@@ -6,5 +6,7 @@ describe('buildContentSecurityPolicy', () => {
     const csp = buildContentSecurityPolicy()
     expect(csp).toContain("'unsafe-inline'")
     expect(csp).toContain('https://*.clerk.accounts.dev')
+    expect(csp).toContain('https://clerk-telemetry.com')
+    expect(csp).toContain('https://image.pollinations.ai')
   })
 })

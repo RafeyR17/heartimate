@@ -20,6 +20,12 @@ INTEGRATION_TEST=1 npm run test:integration
 
 Sign-up already requires **email verification** (6-digit code). Disposable blocklists stop most temp inboxes that never receive mail; Clerk’s setting is the strongest layer.
 
+**Bot sign-up protection (CAPTCHA):** enabled by default in Clerk. `/login` and `/signup` forms include `<ClerkCaptcha />` (`#clerk-captcha`) before submit. If sign-in fails with HTTP **400** and `captcha_missing_token` / `captcha_invalid`, refresh the page, disable ad blockers, and ensure CSP allows `challenges.cloudflare.com` (see `lib/security-headers.ts`).
+
+**OAuth redirect URLs:** custom flows must pass absolute URLs (`getClerkOAuthRedirectUrls` in `lib/clerk-oauth-redirect.ts`) — not bare paths like `/sso-callback`.
+
+**Local keys:** set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in `.env.local`. Without them, Clerk runs in keyless dev mode (`createOrReadKeylessAction` in logs) and sign-in may fail.
+
 **Recommended:** [Clerk → Connect with Supabase](https://dashboard.clerk.com/setup/supabase)
 
 **Also:** `npm run auth:wire` ensures JWT template `supabase` with `aud` + `role: authenticated`.

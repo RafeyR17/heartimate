@@ -11,6 +11,9 @@ import AffectionPanel from './AffectionPanel'
 import ChatMessageList from './ChatMessageList'
 import ChatComposer from './ChatComposer'
 import { useChatViewportSync } from './useChatViewportSync'
+import { ChatQuotaExceededModal } from '@/components/chat/ChatQuotaExceededModal'
+import { ChatImagePanel } from '@/components/chat/ChatImagePanel'
+import { ChatImageFullscreen } from '@/components/chat/ChatImageFullscreen'
 
 export default function ChatClient({
   chatId,
@@ -89,6 +92,34 @@ export default function ChatClient({
         <ChatMessageList />
 
         <ChatComposer />
+
+        <ChatQuotaExceededModal
+          open={stream.quotaModalOpen}
+          resetIn={stream.quotaModalResetIn}
+          onClose={() => stream.setQuotaModalOpen(false)}
+        />
+
+        <ChatImagePanel
+          key={`${stream.showImagePanel}-${stream.prefilledImageRequest}`}
+          isOpen={stream.showImagePanel}
+          onClose={stream.closeImagePanel}
+          onMessageSent={stream.handleImageMessageSent}
+          character={character}
+          chatId={chatId}
+          characterId={character.id}
+          relationshipLevel={stream.relationshipLevel}
+          prefilledRequest={stream.prefilledImageRequest}
+          onQuotaExceeded={(resetIn) => {
+            stream.setQuotaModalResetIn(resetIn)
+            stream.setQuotaModalOpen(true)
+            stream.refreshQuota()
+          }}
+        />
+
+        <ChatImageFullscreen
+          imageUrl={stream.fullscreenImage}
+          onClose={() => stream.setFullscreenImage(null)}
+        />
 
         <PersonaSelectModal
           open={showPersonaModal}

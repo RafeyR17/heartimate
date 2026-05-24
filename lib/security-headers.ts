@@ -20,9 +20,12 @@ export function buildContentSecurityPolicy(): string {
       "connect-src 'self'",
       'https://*.clerk.accounts.dev',
       'https://*.clerk.com',
+      'https://clerk-telemetry.com',
       'https://us.i.posthog.com',
       'https://*.supabase.co',
       'wss://*.supabase.co',
+      'https://image.pollinations.ai',
+      'https://challenges.cloudflare.com',
     ].join(' '),
     [
       "img-src 'self' data: blob:",
@@ -30,6 +33,7 @@ export function buildContentSecurityPolicy(): string {
       'https://*.supabase.in',
       'https://img.clerk.com',
       'https://images.clerk.dev',
+      'https://image.pollinations.ai',
     ].join(' '),
     "style-src 'self' 'unsafe-inline'",
     [

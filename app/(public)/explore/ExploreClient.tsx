@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { Search, X, Heart, MessageSquare, Compass, Sparkles } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { DarkSelect } from "@/components/ui/dark-select";
+import { CharacterAvatar } from "@/components/CharacterAvatar";
 
 const EXPLORE_SORT_OPTIONS = [
   { value: "trending", label: "🔥 Trending" },
@@ -321,20 +321,13 @@ export default function ExploreClient({
                   href={`/characters/${char.id}`}
                   className="group rounded-2xl border border-white/5 bg-[#0d0a0e] overflow-hidden hover:border-[rgba(232,80,122,0.25)] hover:-translate-y-1 transition-all duration-250 hover:shadow-[0_12px_40px_rgba(232,80,122,0.1)] flex flex-col"
                 >
-                  <div className="relative w-full aspect-square bg-white/5">
-                    {char.avatar_url ? (
-                      <Image
-                        src={char.avatar_url}
-                        alt={char.name}
-                        fill
-                        className="object-cover object-top group-hover:scale-105 transition-transform duration-300"
-                        sizes="(max-width:768px) 50vw, 25vw"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-[#1b0a20] flex items-center justify-center">
-                        <span className="font-heading italic text-rose text-xl">AI</span>
-                      </div>
-                    )}
+                  <div className="relative w-full aspect-square bg-white/5 overflow-hidden group-hover:[&_img]:scale-105 transition-transform duration-300">
+                    <CharacterAvatar
+                      name={char.name}
+                      avatarUrl={char.avatar_url}
+                      tags={char.tags}
+                      sizes="(max-width:768px) 50vw, 25vw"
+                    />
                     {char.is_nsfw && (
                       <div className="absolute top-2 left-2 bg-rose text-white text-[10px] font-label font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-[0_0_10px_rgba(232,80,122,0.4)]">
                         18+

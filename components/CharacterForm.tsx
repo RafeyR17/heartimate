@@ -31,6 +31,7 @@ export function CharacterForm({
     genderDropdownRef,
     update,
     handleAvatarChange,
+    setAvatarFromGeneratedUrl,
     removeAvatar,
     addTag,
     removeTag,
@@ -78,6 +79,7 @@ export function CharacterForm({
             dropdownRef={dropdownRef}
             onAvatarChange={handleAvatarChange}
             onRemoveAvatar={removeAvatar}
+            onAvatarGenerated={setAvatarFromGeneratedUrl}
             onAddTag={addTag}
             onRemoveTag={removeTag}
           />

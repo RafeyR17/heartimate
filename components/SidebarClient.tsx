@@ -11,6 +11,7 @@ import {
   Plus,
   Settings,
   Sparkles,
+  KeyRound,
   LogIn,
   UserPlus,
   X,
@@ -239,6 +240,7 @@ function SidebarContent({
         (pathname === "/profile" && searchParams.get("tab") === "characters"),
     },
     { label: "Create", href: "/characters/create", icon: Plus, isActive: pathname === "/characters/create" },
+    { label: "Settings", href: "/settings", icon: KeyRound, isActive: pathname === "/settings" },
   ];
 
   const guestNavLinks: NavLink[] = [

@@ -51,6 +51,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.clerk.dev" },
       { protocol: "https", hostname: "*.supabase.co" },
       { protocol: "https", hostname: "*.supabase.in" },
+      { protocol: "https", hostname: "image.pollinations.ai" },
     ],
   },
   turbopack: {

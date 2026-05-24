@@ -83,11 +83,16 @@ export type ChatsPostResponse = ApiSuccessResponse<{
   personaId?: string | null
 }>
 
+export type MessageType = 'text' | 'image' | 'system'
+
 export type MessageRow = {
   id: string
   role: 'user' | 'assistant'
   content: string
   created_at: string
+  message_type?: MessageType
+  image_url?: string | null
+  image_prompt?: string | null
 }
 
 export type MessagesPageResponse = ApiSuccessResponse<{

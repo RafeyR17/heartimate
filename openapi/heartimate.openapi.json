@@ -201,6 +201,65 @@
         }
       }
     },
+    "/api/chat/image": {
+      "post": {
+        "tags": ["chat"],
+        "summary": "Generate or send in-chat scene image (Pollinations)",
+        "description": "Preview: omit `selectedImageUrl` — returns `prompt` and `imageUrls` (3 variations). Persist: include `selectedImageUrl` and `prompt` — inserts assistant `message_type: image` row; counts toward daily chat quota for free tier.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["chatId", "characterId"],
+                "properties": {
+                  "chatId": { "type": "string" },
+                  "characterId": { "type": "string" },
+                  "userRequest": { "type": "string", "nullable": true },
+                  "relationshipLevel": { "type": "string" },
+                  "selectedImageUrl": { "type": "string", "format": "uri" },
+                  "prompt": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preview URLs or saved image message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "const": true },
+                    "prompt": { "type": "string" },
+                    "imageUrls": { "type": "array", "items": { "type": "string", "format": "uri" } },
+                    "message": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "role": { "type": "string" },
+                        "content": { "type": "string" },
+                        "created_at": { "type": "string" },
+                        "message_type": { "enum": ["text", "image", "system"] },
+                        "image_url": { "type": "string" },
+                        "image_prompt": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "description": "Chat or character not found" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "description": "Could not save image message" }
+        }
+      }
+    },
     "/api/chats": {
       "post": {
         "tags": ["chats"],
@@ -445,6 +504,98 @@
         },
         "responses": {
           "200": { "description": "Updated user" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/users/api-key": {
+      "get": {
+        "tags": ["users"],
+        "summary": "BYOK status and daily usage",
+        "responses": {
+          "200": { "description": "Quota and key status (no raw key)" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["users"],
+        "summary": "Save and validate BYOK API key",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["apiKey", "provider"],
+                "properties": {
+                  "apiKey": { "type": "string" },
+                  "provider": { "type": "string", "enum": ["openrouter", "openai"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Key saved" },
+          "400": { "description": "Invalid key" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      },
+      "delete": {
+        "tags": ["users"],
+        "summary": "Remove BYOK API key",
+        "responses": {
+          "200": { "description": "Key removed" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/generate-image": {
+      "post": {
+        "tags": ["characters"],
+        "summary": "Generate character avatar via Pollinations AI",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "personality": { "type": "string" },
+                  "tags": { "type": "array", "items": { "type": "string" } },
+                  "gender": { "type": "string" },
+                  "customPrompt": { "type": "string" },
+                  "variationCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+                  "width": { "type": "integer" },
+                  "height": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pollinations image URLs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "prompt": { "type": "string" },
+                    "mainUrl": { "type": "string" },
+                    "variationUrls": { "type": "array", "items": { "type": "string" } },
+                    "seed": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
           "401": { "$ref": "#/components/responses/Unauthorized" },
           "429": { "$ref": "#/components/responses/RateLimited" }
         }

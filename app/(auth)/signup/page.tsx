@@ -9,6 +9,8 @@ import { useSignUp } from "@clerk/nextjs/legacy";
 import { capturePostHog, identifyPostHog } from "@/lib/posthog-browser";
 import { mapClerkError } from "@/lib/auth-errors";
 import { validateSignupEmail } from "@/lib/signup-email";
+import { ClerkCaptcha } from "@/components/ClerkCaptcha";
+import { getClerkOAuthRedirectUrls } from "@/lib/clerk-oauth-redirect";
 
 export default function SignupPage() {
   const { isLoaded, signUp, setActive } = useSignUp();
@@ -105,13 +107,15 @@ export default function SignupPage() {
   }
 
   const handleOAuth = (strategy: "oauth_google" | "oauth_discord") => {
-    if (!isLoaded) return;
+    if (!isLoaded || !signUp) return;
     const method = strategy === "oauth_google" ? "google" : "discord";
-    void capturePostHog('user_signed_up', { method });
-    signUp.authenticateWithRedirect({
+    void capturePostHog("user_signed_up", { method });
+    const { redirectUrl, redirectUrlComplete } =
+      getClerkOAuthRedirectUrls("/onboarding");
+    void signUp.authenticateWithRedirect({
       strategy,
-      redirectUrl: "/sso-callback",
-      redirectUrlComplete: "/onboarding",
+      redirectUrl,
+      redirectUrlComplete,
     });
   };
 
@@ -119,7 +123,7 @@ export default function SignupPage() {
   if (verifying) {
     return (
       <div className="min-h-[100dvh] bg-[var(--bg)] flex flex-col items-center justify-center gap-6 p-6">
-        <div id="clerk-captcha" />
+        <ClerkCaptcha />
         <h2 className="heading-accent text-4xl">Check your email.</h2>
         <p className="text-muted-on-dark text-[15px] text-center">
           We sent a 6-digit code to {email}
@@ -157,7 +161,6 @@ export default function SignupPage() {
 
   return (
     <div className="flex flex-col md:flex-row min-h-[100dvh] bg-[#0d0a0e] text-white overflow-x-hidden">
-      <div id="clerk-captcha"></div>
       <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
@@ -321,14 +324,15 @@ export default function SignupPage() {
               </label>
             </div>
 
+            <ClerkCaptcha />
+
             {error && (
               <p className="text-error mt-2">{error}</p>
             )}
 
             <button
-              type="button"
+              type="submit"
               disabled={loading || !isLoaded}
-              onClick={() => void handleSubmit()}
               className="btn-primary w-full uppercase tracking-wider mt-4"
             >
               {!isLoaded ? "Loading..." : loading ? "Creating..." : "BEGIN →"}

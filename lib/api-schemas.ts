@@ -81,6 +81,30 @@ export const usersMePatchJsonSchema = z.object({
   avatarUrl: z.string().max(2048).nullable().optional(),
 })
 
+export const BYOK_PROVIDERS = ['openrouter', 'openai'] as const
+
+export const usersApiKeyPostSchema = z
+  .object({
+    apiKey: z.string().trim().min(8).max(512),
+    provider: z.enum(BYOK_PROVIDERS),
+  })
+  .superRefine((data, ctx) => {
+    if (data.provider === 'openrouter' && !data.apiKey.startsWith('sk-or-')) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Invalid OpenRouter key format. Must start with sk-or-',
+        path: ['apiKey'],
+      })
+    }
+    if (data.provider === 'openai' && !data.apiKey.startsWith('sk-')) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Invalid OpenAI key format',
+        path: ['apiKey'],
+      })
+    }
+  })
+
 export const chatPatchSchema = z
   .object({
     personaId: idField.nullable().optional(),
@@ -116,6 +140,28 @@ export const personaFormSchema = z.object({
   short_bio: trimmedString(MAX_PERSONA_SHORT_BIO_LENGTH).optional().nullable(),
   appearance: trimmedString(MAX_PERSONA_APPEARANCE_LENGTH).optional().nullable(),
   personality: trimmedString(MAX_PERSONA_PERSONALITY_LENGTH).optional().nullable(),
+})
+
+export const chatImagePostSchema = z.object({
+  chatId: idField,
+  characterId: idField,
+  userRequest: trimmedString(500).optional().nullable(),
+  relationshipLevel: z.string().max(64).optional(),
+  /** When set, persists assistant image message (after user picks a variation). */
+  selectedImageUrl: z.string().url().max(2048).optional(),
+  prompt: z.string().max(4000).optional(),
+})
+
+export const generateImagePostSchema = z.object({
+  name: trimmedString(MAX_CHARACTER_NAME_LENGTH).optional(),
+  description: trimmedString(MAX_CHARACTER_DESCRIPTION_LENGTH).optional(),
+  personality: trimmedString(MAX_CHARACTER_PERSONALITY_LENGTH).optional(),
+  tags: z.array(z.string().max(64)).max(8).optional(),
+  gender: z.string().max(32).optional(),
+  customPrompt: z.string().max(4000).optional(),
+  variationCount: z.number().int().min(1).max(4).optional(),
+  width: z.number().int().min(256).max(1024).optional(),
+  height: z.number().int().min(256).max(1536).optional(),
 })
 
 export function zodValidationError(error: z.ZodError): Response {

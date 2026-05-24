@@ -42,6 +42,22 @@ const { moderateUserMessage } = vi.hoisted(() => ({
   >(async () => ({ allowed: true })),
 }))
 
+vi.mock('@/lib/byok', () => ({
+  getUserApiKey: vi.fn(async () => ({
+    apiKey: 'test-openrouter-key',
+    provider: 'openrouter' as const,
+    isByok: false,
+  })),
+}))
+
+vi.mock('@/lib/quota', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/quota')>()
+  return {
+    ...actual,
+    incrementQuota: vi.fn(async () => undefined),
+  }
+})
+
 vi.mock('@/lib/chat-moderation', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/chat-moderation')>()
   return {
@@ -82,7 +98,27 @@ const CHAT_TURN_CONTEXT_RPC = {
   memory_summary: null,
 }
 
-function chatSupabaseWithOwnership(options?: { isNsfw?: boolean }) {
+type QuotaRow = {
+  daily_msg_count: number
+  msg_reset_at: string
+  is_byok: boolean
+  is_premium: boolean
+}
+
+function defaultQuotaRow(overrides?: Partial<QuotaRow>): QuotaRow {
+  return {
+    daily_msg_count: 0,
+    msg_reset_at: new Date().toISOString(),
+    is_byok: false,
+    is_premium: false,
+    ...overrides,
+  }
+}
+
+function chatSupabaseWithOwnership(options?: {
+  isNsfw?: boolean
+  quota?: Partial<QuotaRow>
+}) {
   const turnContext = {
     ...CHAT_TURN_CONTEXT_RPC,
     character: {
@@ -90,9 +126,16 @@ function chatSupabaseWithOwnership(options?: { isNsfw?: boolean }) {
       is_nsfw: options?.isNsfw ?? false,
     },
   }
+  const quotaRow = defaultQuotaRow(options?.quota)
 
   return createMockSupabaseClient({
     from: (table) => {
+      if (table === 'users') {
+        return createQueryChain(async () => ({
+          data: quotaRow,
+          error: null,
+        }))
+      }
       if (table === 'messages') {
         return createQueryChain(async () => ({
           data: { id: 'msg-user-1' },
@@ -116,12 +159,33 @@ function chatSupabaseWithOwnership(options?: { isNsfw?: boolean }) {
   })
 }
 
+function quotaUsersChain() {
+  return createQueryChain(async () => ({
+    data: {
+      daily_msg_count: 0,
+      msg_reset_at: new Date().toISOString(),
+      is_byok: false,
+      is_premium: false,
+    },
+    error: null,
+  }))
+}
+
 describe('POST /api/chat', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getServiceRoleClient).mockImplementation(() =>
       createMockSupabaseClient({
-        rpc: async () => ({ data: true, error: null }),
+        from: (table) => {
+          if (table === 'users') return quotaUsersChain()
+          return createQueryChain(async () => ({ data: null, error: null }))
+        },
+        rpc: async (fn) => {
+          if (fn === 'increment_message_count') {
+            return { data: null, error: null }
+          }
+          return { data: true, error: null }
+        },
       })
     )
   })
@@ -211,6 +275,17 @@ describe('POST /api/chat', () => {
     vi.mocked(getServiceRoleClient).mockReturnValueOnce(
       createMockSupabaseClient({
         from: (table) => {
+          if (table === 'users') {
+            return createQueryChain(async () => ({
+              data: {
+                daily_msg_count: 20,
+                msg_reset_at: new Date().toISOString(),
+                is_byok: false,
+                is_premium: false,
+              },
+              error: null,
+            }))
+          }
           if (table === 'chat_rate_events') {
             return createQueryChain(async () => ({
               data: null,
@@ -229,7 +304,11 @@ describe('POST /api/chat', () => {
       })
     )
     createAuthedDb.mockResolvedValue(
-      mockAuthedDb({ supabase: chatSupabaseWithOwnership() })
+      mockAuthedDb({
+        supabase: chatSupabaseWithOwnership({
+          quota: { daily_msg_count: 20 },
+        }),
+      })
     )
 
     const res = await POST(
@@ -240,17 +319,25 @@ describe('POST /api/chat', () => {
     )
     const { status, json } = await readJsonResponse(res)
     expect(status).toBe(429)
-    expect(json.code).toBe('daily_chat_limit')
+    expect(json.code).toBe('quota_exceeded')
     if (prev === undefined) delete process.env.CHAT_DAILY_MESSAGE_LIMIT
     else process.env.CHAT_DAILY_MESSAGE_LIMIT = prev
   })
 
   it('returns 429 when rate limited', async () => {
-    vi.mocked(getServiceRoleClient).mockReturnValueOnce(
+    vi.mocked(getServiceRoleClient).mockReset()
+    vi.mocked(getServiceRoleClient).mockImplementation(() =>
       createMockSupabaseClient({
+        from: (table) => {
+          if (table === 'users') return quotaUsersChain()
+          return createQueryChain(async () => ({ data: null, error: null }))
+        },
         rpc: async (fn) => {
           if (fn === 'try_acquire_chat_rate_slot') {
             return { data: false, error: null }
+          }
+          if (fn === 'increment_message_count') {
+            return { data: null, error: null }
           }
           return { data: true, error: null }
         },

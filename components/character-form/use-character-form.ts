@@ -138,6 +138,19 @@ export function useCharacterForm({
     }
   }
 
+  const setAvatarFromGeneratedUrl = (url: string) => {
+    setForm((prev) => {
+      if (prev.avatarPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(prev.avatarPreview)
+      }
+      return {
+        ...prev,
+        avatarFile: null,
+        avatarPreview: url,
+      }
+    })
+  }
+
   const removeAvatar = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (form.avatarPreview.startsWith('blob:')) {
@@ -283,6 +296,7 @@ export function useCharacterForm({
     genderDropdownRef,
     update,
     handleAvatarChange,
+    setAvatarFromGeneratedUrl,
     removeAvatar,
     addTag,
     removeTag,

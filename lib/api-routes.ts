@@ -29,6 +29,11 @@ export const API_ROUTES = [
   'POST /api/characters/:id/like',
   'GET /api/users/me',
   'PATCH /api/users/me',
+  'GET /api/users/api-key',
+  'POST /api/users/api-key',
+  'DELETE /api/users/api-key',
+  'POST /api/generate-image',
+  'POST /api/chat/image',
 ] as const
 
 export type ApiRouteId = (typeof API_ROUTES)[number]
