@@ -28,6 +28,8 @@ export default function SettingsClient() {
   const [apiKey, setApiKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [removing, setRemoving] = useState(false)
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false)
   const [error, setError] = useState('')
 
   const loadStatus = useCallback(async () => {
@@ -82,19 +84,30 @@ export default function SettingsClient() {
   }
 
   async function handleRemoveKey() {
-    if (
-      !confirm(
-        'Remove your API key? You will be switched back to the 20 messages/day free tier.'
-      )
-    ) {
-      return
-    }
-    const result = await apiFetch('/api/users/api-key', { method: 'DELETE' })
+    setRemoving(true)
+    setError('')
+    const result = await apiFetch<{ message?: string }>('/api/users/api-key', {
+      method: 'DELETE',
+      credentials: 'same-origin',
+    })
+    setRemoving(false)
     if (!result.ok) {
       toastError('Failed to remove key', result.error)
       return
     }
+    setRemoveConfirmOpen(false)
     success('API key removed')
+    setStatus((prev) =>
+      prev
+        ? {
+            ...prev,
+            hasByok: false,
+            provider: null,
+            keyPreview: null,
+            remaining: Math.max(0, FREE_DAILY_LIMIT - prev.dailyCount),
+          }
+        : prev
+    )
     void loadStatus()
   }
 
@@ -151,14 +164,52 @@ export default function SettingsClient() {
                     {status.keyPreview ?? 'sk-••••••••••••'}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void handleRemoveKey()}
-                  className="inline-flex items-center gap-2 font-body text-[13px] text-muted hover:text-white transition-colors min-h-[44px]"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Remove
-                </button>
+                {removeConfirmOpen ? (
+                  <div
+                    className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-4 space-y-3"
+                    role="alertdialog"
+                    aria-labelledby="remove-key-title"
+                    aria-describedby="remove-key-desc"
+                  >
+                    <p
+                      id="remove-key-title"
+                      className="font-body text-[14px] text-white font-medium"
+                    >
+                      Remove API key?
+                    </p>
+                    <p id="remove-key-desc" className="font-body text-[13px] text-muted">
+                      You will return to the {FREE_DAILY_LIMIT} messages/day free tier.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={removing}
+                        onClick={() => void handleRemoveKey()}
+                        className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-full bg-red-600/90 text-white font-body text-[13px] font-medium hover:bg-red-600 disabled:opacity-50 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" aria-hidden />
+                        {removing ? 'Removing…' : 'Yes, remove key'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={removing}
+                        onClick={() => setRemoveConfirmOpen(false)}
+                        className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-full border border-white/15 text-muted font-body text-[13px] hover:text-white hover:border-white/25 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setRemoveConfirmOpen(true)}
+                    className="inline-flex items-center gap-2 font-body text-[13px] text-muted hover:text-white transition-colors min-h-[44px] min-w-[44px]"
+                  >
+                    <Trash2 className="w-4 h-4" aria-hidden />
+                    Remove
+                  </button>
+                )}
               </div>
             ) : (
               <div className="mt-5">

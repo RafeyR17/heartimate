@@ -3,23 +3,72 @@
 import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 
-export function formatMessage(content: string) {
-  if (!content) return ''
-  const parts = content.split(/(\*.*?\*)/g)
-  return parts.map((part, index) => {
-    if (part.startsWith('*') && part.endsWith('*')) {
-      return (
-        <span
-          key={index}
-          className="italic text-[#e8507a] font-heading font-medium tracking-wide text-[13.5px] leading-relaxed block my-1"
-        >
-          {part.slice(1, -1)}
-        </span>
-      )
-    }
-    return <span key={index}>{part}</span>
-  })
+/** @deprecated Wrapper styles live on `<p>` inside renderMessageContent. */
+export const messageContentClassName = 'm-0'
+
+/** Split *complete action sentences*; dialogue stays plain white text. */
+export function renderMessageContent(content: string) {
+  const cleaned = content
+    .replace(/\*\s*"/g, '"')
+    .replace(/"\s*\*/g, '"')
+    .replace(/\*\s*'/g, "'")
+    .replace(/'\s*\*/g, "'")
+    // Remove asterisks when action is mid-sentence mixed with dialogue
+    .replace(/"([^"]*)\*([^*"]+)\*([^"]*)"/g, '"$1$2$3"')
+
+  const parts = cleaned.split(/(\*[^*\n]+\*)/g)
+
+  return (
+    <p
+      style={{
+        margin: 0,
+        lineHeight: '1.8',
+        fontSize: '15px',
+        color: 'rgba(255,255,255,0.92)',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+      }}
+    >
+      {parts.map((part, i) => {
+        if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+          const inner = part.slice(1, -1)
+          // Contains quotes or is short (single word/phrase) = white
+          if (
+            inner.includes('"') ||
+            inner.includes("'") ||
+            inner.split(' ').length < 4
+          ) {
+            return (
+              <span key={i} style={{ color: 'rgba(255,255,255,0.92)' }}>
+                {inner}
+              </span>
+            )
+          }
+          return (
+            <em
+              key={i}
+              style={{
+                color: 'rgba(232,80,122,0.85)',
+                fontStyle: 'italic',
+                fontFamily: 'Playfair Display, serif',
+              }}
+            >
+              {inner}
+            </em>
+          )
+        }
+        return (
+          <span key={i} style={{ color: 'rgba(255,255,255,0.92)' }}>
+            {part}
+          </span>
+        )
+      })}
+    </p>
+  )
 }
+
+/** @deprecated Use renderMessageContent */
+export const formatMessage = renderMessageContent
 
 export function TimestampHover({
   children,

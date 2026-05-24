@@ -7,7 +7,7 @@ import { AvatarImage } from '@/components/ui/avatar-image'
 import { iconTouchClass } from '@/lib/touch-targets'
 import { REACTION_KEYS, type Message, isUserRole } from './chat-types'
 import { useChatSession } from './ChatSessionContext'
-import { formatMessage, TimestampHover, type TouchHandlers } from './message-ui'
+import { renderMessageContent, TimestampHover, type TouchHandlers } from './message-ui'
 import { ChatImageMessage, isImageMessage } from '@/components/chat/ChatImageMessage'
 
 export interface ChatMessageItemProps {
@@ -122,7 +122,7 @@ export default function ChatMessageItem({ msg, index, touchHandlers }: ChatMessa
                     className="relative rounded-[16px_4px_16px_16px] bg-[rgba(232,80,122,0.22)] border border-[rgba(232,80,122,0.38)] px-4 py-3 pr-11 font-body text-[14px] text-white leading-relaxed outline-none ring-[#e8507a]/35 focus-visible:ring-2 select-text"
                     {...touchHandlers}
                   >
-                    <p className="whitespace-pre-wrap break-words">{formatMessage(msg.content)}</p>
+                    {renderMessageContent(msg.content)}
                     {!isStreaming && (
                       <div className="absolute top-1.5 right-1.5 z-10 flex items-center gap-0.5 rounded-md bg-black/30 p-0.5 opacity-0 transition-opacity duration-150 group-hover/msg:opacity-100 group-focus-within/msg:opacity-100">
                         <button
@@ -198,7 +198,7 @@ export default function ChatMessageItem({ msg, index, touchHandlers }: ChatMessa
                   }`}
                   {...touchHandlers}
                 >
-                  <p className="whitespace-pre-wrap break-words">{formatMessage(msg.content)}</p>
+                  {renderMessageContent(msg.content)}
                   {justSpecialIds.has(msg.id) && (
                     <span title="A special moment" className="absolute bottom-1.5 right-2 text-[#e8507a] text-[12px]">
                       ✨

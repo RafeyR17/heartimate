@@ -2,9 +2,10 @@
   "scenarioId": "nsfw-flirty",
   "target": "prompt",
   "mustContain": [
+    "FORMATTING RULES — FOLLOW EXACTLY",
     "ADULT ROLEPLAY RULES (STRICTLY FOLLOW)",
-    "ACTION STYLE (VERY IMPORTANT)",
-    "Bad Examples (Never Do This)",
+    "WRONG — NEVER DO THIS",
+    "CORRECT:",
     "Lyra"
   ],
   "mustNotContain": ["as an AI", "you are a language model", "{{char}}", "{{user}}", "CORE IDENTITY:"]

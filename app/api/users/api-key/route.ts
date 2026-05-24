@@ -99,14 +99,13 @@ export const POST = withAuthedApi(async (authed, req: Request) => {
 
 export const DELETE = withAuthedApi(async (authed, req: Request) => {
   return runApiHandler('DELETE /api/users/api-key', req, async ({ log, setUserId }) => {
-    const { user } = authed
+    const { user, supabase } = authed
     setUserId(user.id)
 
     const rateLimited = await assertApiRateLimit(user.id, 'byok_remove')
     if (rateLimited) return rateLimited
 
-    const admin = getServiceRoleClient()
-    const { error } = await admin
+    const { data, error } = await supabase
       .from('users')
       .update({
         byok_key_encrypted: null,
@@ -114,9 +113,16 @@ export const DELETE = withAuthedApi(async (authed, req: Request) => {
         is_byok: false,
       })
       .eq('id', user.id)
+      .select('id')
+      .maybeSingle()
 
     if (error) {
       log.error('byok.remove_failed', { message: error.message })
+      return apiError('Failed to remove API key', 500)
+    }
+
+    if (!data) {
+      log.error('byok.remove_no_row', { userId: user.id })
       return apiError('Failed to remove API key', 500)
     }
 

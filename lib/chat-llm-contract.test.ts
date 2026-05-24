@@ -77,8 +77,8 @@ describe('OpenRouter chat payload contract', () => {
     const body = bodyForTurn(context, 'Hi', false)
     const system = body.messages[0]?.content ?? ''
     expect(system).toContain('ADULT ROLEPLAY RULES (STRICTLY FOLLOW)')
-    expect(system).toContain('ACTION STYLE (VERY IMPORTANT)')
-    expect(system).toContain('Bad Examples (Never Do This)')
+    expect(system).toContain('FORMATTING RULES — FOLLOW EXACTLY')
+    expect(system).toContain('WRONG — NEVER DO THIS')
     expect(system).not.toContain('{{char}}')
     expect(system).not.toContain('CORE IDENTITY:')
   })

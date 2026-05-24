@@ -5,7 +5,7 @@ import { ChevronDown } from 'lucide-react'
 import { AvatarImage } from '@/components/ui/avatar-image'
 import type { Message } from './chat-types'
 import { useChatSession } from './ChatSessionContext'
-import { formatMessage, ChatMessageStyles } from './message-ui'
+import { renderMessageContent, ChatMessageStyles } from './message-ui'
 import ChatEmptyState from './ChatEmptyState'
 import ChatMessageItem from './ChatMessageItem'
 import MobileMessageSheet from './MobileMessageSheet'
@@ -201,7 +201,7 @@ export default function ChatMessageList() {
             <div
               className={`flex-1 min-w-0 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)] rounded-[4px_16px_16px_16px] p-[14px_16px] font-body text-[14px] relative ${specialStream ? 'special-bubble' : ''}`}
             >
-              <p className="whitespace-pre-wrap break-words inline">{formatMessage(streamingContent)}</p>
+              {renderMessageContent(streamingContent)}
               <span className="w-[2px] h-[14px] bg-[#e8507a] inline-block ml-1 align-middle animate-blink" />
             </div>
           </div>

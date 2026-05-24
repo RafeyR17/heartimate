@@ -15,6 +15,8 @@ import { ChatQuotaExceededModal } from '@/components/chat/ChatQuotaExceededModal
 import { ChatImagePanel } from '@/components/chat/ChatImagePanel'
 import { ChatImageFullscreen } from '@/components/chat/ChatImageFullscreen'
 
+export { renderMessageContent } from './message-ui'
+
 export default function ChatClient({
   chatId,
   character,

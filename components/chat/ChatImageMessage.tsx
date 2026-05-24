@@ -3,7 +3,7 @@
 import { Download, Maximize2 } from 'lucide-react'
 import { PollinationsThumbnail } from '@/components/chat/PollinationsThumbnail'
 import { AvatarImage } from '@/components/ui/avatar-image'
-import { TimestampHover, formatMessage } from '@/app/(app)/chat/[chatId]/message-ui'
+import { TimestampHover, renderMessageContent } from '@/app/(app)/chat/[chatId]/message-ui'
 import { formatMessageTooltip } from '@/lib/chat-starters'
 import type { ChatCharacter, Message } from '@/lib/chat-ui-types'
 import type { TouchHandlers } from '@/app/(app)/chat/[chatId]/message-ui'
@@ -64,9 +64,7 @@ export function ChatImageMessage({
           </button>
         </TimestampHover>
 
-        <p className="mt-1.5 font-heading text-[12px] italic text-white/30">
-          {formatMessage(msg.content)}
-        </p>
+        <div className="mt-1.5">{renderMessageContent(msg.content)}</div>
 
         <a
           href={url}

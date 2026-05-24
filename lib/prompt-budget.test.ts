@@ -26,8 +26,9 @@ describe('buildSystemPrompt budgets', () => {
     })
 
     expect(prompt).toContain('ADULT ROLEPLAY RULES (STRICTLY FOLLOW)')
-    expect(prompt).toContain('ACTION STYLE (VERY IMPORTANT)')
-    expect(prompt).toContain('Never use "I" in actions')
+    expect(prompt).toContain('FORMATTING RULES — FOLLOW EXACTLY')
+    expect(prompt).toContain('CORRECT:')
+    expect(prompt).toContain('third person')
     expect(prompt).not.toContain('{{char}}')
     expect(prompt).not.toContain('CORE IDENTITY:')
     expect(prompt).toContain('You are Test,')
