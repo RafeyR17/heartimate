@@ -3,20 +3,15 @@ import {
   resolveOnboardingReveal,
   resolveOnboardingTeaser,
 } from '@/lib/onboarding-copy'
+import {
+  ONBOARDING_STARTER_FALLBACK_IMG,
+  type OnboardingStarter,
+} from '@/lib/onboarding-starter-shared'
 import { serverLog } from '@/lib/server-log'
 
-export type OnboardingStarter = {
-  id: string
-  name: string
-  tag: string
-  img: string
-  teaser: string
-  msg: string
-  description?: string
-  tags?: string[]
-}
+export type { OnboardingStarter } from '@/lib/onboarding-starter-shared'
+export { ONBOARDING_STARTER_FALLBACK_IMG } from '@/lib/onboarding-starter-shared'
 
-export const ONBOARDING_STARTER_FALLBACK_IMG = '/images/characters/lyra.jpg'
 const FALLBACK_IMG = ONBOARDING_STARTER_FALLBACK_IMG
 
 function firstTag(tags: unknown): string {

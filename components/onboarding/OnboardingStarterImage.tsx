@@ -5,7 +5,7 @@ import Image from 'next/image'
 import {
   ONBOARDING_STARTER_FALLBACK_IMG,
   type OnboardingStarter,
-} from '@/lib/onboarding-starters'
+} from '@/lib/onboarding-starter-shared'
 
 type OnboardingStarterImageProps = {
   starter: OnboardingStarter
