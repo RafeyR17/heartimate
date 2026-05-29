@@ -11,6 +11,10 @@ export type ChatChromeValue = {
   setChatTitle: (title: string) => void
   persona: Persona | null
   userDisplayName: string
+  activeSpeakingId: string | null
+  setActiveSpeakingId: (id: string | null) => void
+  voiceEnabled: boolean
+  setVoiceEnabled: (enabled: boolean) => void
   showAffectionPanel: boolean
   onToggleAffectionPanel: () => void
   onOpenPersonaModal: () => void

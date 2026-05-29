@@ -6,6 +6,11 @@ import { Eye, EyeOff, Trash2 } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import { useToast } from '@/components/ToastProvider'
 import { FREE_DAILY_LIMIT } from '@/lib/quota-constants'
+import {
+  loadSpeechVoices,
+  VOICE_ID_STORAGE_KEY,
+  VOICE_SPEED_STORAGE_KEY,
+} from '@/lib/speech-voices'
 
 type ApiKeyStatus = {
   hasByok: boolean
@@ -31,6 +36,17 @@ export default function SettingsClient() {
   const [removing, setRemoving] = useState(false)
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false)
   const [error, setError] = useState('')
+  const [voiceSpeed, setVoiceSpeed] = useState(() => {
+    if (typeof window === 'undefined') return 1.0
+    const stored = parseFloat(localStorage.getItem('heartimate-voice-speed') || '1.0')
+    return Number.isFinite(stored) ? stored : 1.0
+  })
+  const [selectedVoice, setSelectedVoice] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    return localStorage.getItem(VOICE_ID_STORAGE_KEY) || ''
+  })
+  const [browserVoices, setBrowserVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [voicesLoading, setVoicesLoading] = useState(true)
 
   const loadStatus = useCallback(async () => {
     const result = await apiFetch<ApiKeyStatus>('/api/users/api-key', {
@@ -53,6 +69,25 @@ export default function SettingsClient() {
     }, 0)
     return () => clearTimeout(timeoutId)
   }, [loadStatus])
+
+  useEffect(() => {
+    let cancelled = false
+    void loadSpeechVoices().then((voices) => {
+      if (cancelled) return
+      setBrowserVoices(voices)
+      setVoicesLoading(false)
+      if (voices.length === 0) return
+      setSelectedVoice((current) => {
+        if (current && voices.some((v) => v.voiceURI === current)) return current
+        const next = voices[0].voiceURI
+        localStorage.setItem(VOICE_ID_STORAGE_KEY, next)
+        return next
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const used = status?.dailyCount ?? 0
   const limit = status?.dailyLimit ?? FREE_DAILY_LIMIT
@@ -322,6 +357,64 @@ export default function SettingsClient() {
                 ? 'BYOK — no daily cap'
                 : `Resets in ${status?.resetIn ?? '24h'}`}
             </p>
+          </section>
+
+          <section className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-7">
+            <h2 className="font-body font-semibold text-[16px] text-white mb-4">
+              🔊 Voice
+            </h2>
+
+            <div>
+              <label
+                htmlFor="voice-select"
+                className="block font-label text-[10px] uppercase tracking-[0.15em] text-muted"
+              >
+                Voice
+              </label>
+              {voicesLoading ? (
+                <p className="mt-2 font-body text-[13px] text-muted">Loading voices…</p>
+              ) : browserVoices.length === 0 ? (
+                <p className="mt-2 font-body text-[13px] text-muted">
+                  No system voices found. Check browser speech settings.
+                </p>
+              ) : (
+                <select
+                  id="voice-select"
+                  value={selectedVoice}
+                  onChange={(e) => {
+                    setSelectedVoice(e.target.value)
+                    localStorage.setItem(VOICE_ID_STORAGE_KEY, e.target.value)
+                  }}
+                  className="voice-select input-field mt-2 cursor-pointer"
+                >
+                  {browserVoices.map((v) => (
+                    <option key={v.voiceURI} value={v.voiceURI}>
+                      {v.name} ({v.lang})
+                      {v.default ? ' · default' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            <div className="mt-5">
+              <label className="block font-label text-[10px] uppercase tracking-[0.15em] text-muted">
+                Voice speed ({voiceSpeed.toFixed(1)}x)
+              </label>
+              <input
+                type="range"
+                min="0.7"
+                max="1.3"
+                step="0.1"
+                value={voiceSpeed}
+                onChange={(e) => {
+                  const next = parseFloat(e.target.value)
+                  setVoiceSpeed(next)
+                  localStorage.setItem(VOICE_SPEED_STORAGE_KEY, String(next))
+                }}
+                className="mt-3 w-full accent-rose"
+              />
+            </div>
           </section>
 
           <section className="rounded-2xl border border-white/[0.07] overflow-hidden">

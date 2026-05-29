@@ -9,6 +9,7 @@ import { REACTION_KEYS, type Message, isUserRole } from './chat-types'
 import { useChatSession } from './ChatSessionContext'
 import { renderMessageContent, TimestampHover, type TouchHandlers } from './message-ui'
 import { ChatImageMessage, isImageMessage } from '@/components/chat/ChatImageMessage'
+import { VoiceButton } from '@/components/VoiceButton'
 
 export interface ChatMessageItemProps {
   msg: Message
@@ -33,6 +34,9 @@ export default function ChatMessageItem({ msg, index, touchHandlers }: ChatMessa
     justSpecialIds,
     regenerateCount,
     myReaction,
+    activeSpeakingId,
+    setActiveSpeakingId,
+    voiceEnabled,
     saveEdit,
     handleCopyMessage,
     deleteMessageConfirmed,
@@ -196,6 +200,13 @@ export default function ChatMessageItem({ msg, index, touchHandlers }: ChatMessa
                   className={`relative w-full bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)] rounded-[4px_16px_16px_16px] p-[14px_16px] pr-10 font-body text-[rgba(255,255,255,0.9)] leading-[1.75] shadow-md select-text outline-none ring-[#e8507a]/30 focus-visible:ring-2 ${
                     justSpecialIds.has(msg.id) ? 'special-bubble' : ''
                   }`}
+                  style={{
+                    ...(activeSpeakingId === msg.id && {
+                      borderColor: 'rgba(232,80,122,0.4)',
+                      boxShadow: '0 0 20px rgba(232,80,122,0.1)',
+                      animation: 'voicePulse 2s ease infinite',
+                    }),
+                  }}
                   {...touchHandlers}
                 >
                   {renderMessageContent(msg.content)}
@@ -251,6 +262,14 @@ export default function ChatMessageItem({ msg, index, touchHandlers }: ChatMessa
                     No
                   </button>
                 </div>
+              )}
+              {voiceEnabled && !isStreaming && msg.role === 'assistant' && (
+                <VoiceButton
+                  text={msg.content}
+                  messageId={msg.id}
+                  activeSpeakingId={activeSpeakingId}
+                  onSpeakingChange={setActiveSpeakingId}
+                />
               )}
 
               <div className="relative pl-0 pt-1 opacity-0 group-hover/msg:opacity-100 translate-y-2 group-hover/msg:translate-y-0 transition-all duration-200">

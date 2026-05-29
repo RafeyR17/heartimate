@@ -8,6 +8,8 @@ import {
   Plus,
   Trash2,
   User,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
 import {
   apiFetch,
@@ -21,6 +23,7 @@ import { iconTouchClass } from '@/lib/touch-targets'
 import { resolveChatGreetingName } from '@/lib/chat-greeting-name'
 import { DEFAULT_PERSONA_AVATAR } from './chat-types'
 import { useChatSession } from './ChatSessionContext'
+import { stopKokoroSpeaking } from '@/lib/kokoro-tts'
 
 export default function ChatHeader() {
   const {
@@ -30,6 +33,10 @@ export default function ChatHeader() {
     setChatTitle,
     persona,
     userDisplayName,
+    activeSpeakingId,
+    setActiveSpeakingId,
+    voiceEnabled,
+    setVoiceEnabled,
     relInfo,
     showAffectionPanel,
     onToggleAffectionPanel,
@@ -193,6 +200,34 @@ export default function ChatHeader() {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 pt-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                const newVal = !voiceEnabled
+                setVoiceEnabled(newVal)
+                localStorage.setItem('heartimate-voice-enabled', String(newVal))
+                if (!newVal) {
+                  stopKokoroSpeaking()
+                  setActiveSpeakingId(null)
+                }
+              }}
+              aria-label={voiceEnabled ? 'Disable voice' : 'Enable voice'}
+              title={voiceEnabled ? 'Disable voice' : 'Enable voice'}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: voiceEnabled ? 'white' : 'rgba(255,255,255,0.3)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            </button>
             <button
               type="button"
               onClick={onOpenPersonaModal}

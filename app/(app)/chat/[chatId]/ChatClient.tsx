@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import PersonaSelectModal from '@/components/PersonaSelectModal'
 import type { Persona } from '@/lib/persona-constants'
 import type { ChatClientProps } from './chat-types'
@@ -14,6 +14,7 @@ import { useChatViewportSync } from './useChatViewportSync'
 import { ChatQuotaExceededModal } from '@/components/chat/ChatQuotaExceededModal'
 import { ChatImagePanel } from '@/components/chat/ChatImagePanel'
 import { ChatImageFullscreen } from '@/components/chat/ChatImageFullscreen'
+import { stopKokoroSpeaking } from '@/lib/kokoro-tts'
 
 export { renderMessageContent } from './message-ui'
 
@@ -49,11 +50,19 @@ export default function ChatClient({
   }
   const [showPersonaModal, setShowPersonaModal] = useState(false)
   const [showAffectionPanel, setShowAffectionPanel] = useState(false)
+  const [activeSpeakingId, setActiveSpeakingId] = useState<string | null>(null)
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('heartimate-voice-enabled') !== 'false'
+  })
 
   const stickBottomRef = useRef(true)
   const editTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   useChatViewportSync()
+  useEffect(() => {
+    return () => stopKokoroSpeaking()
+  }, [])
 
   const stream = useChatStream({
     chatId,
@@ -78,6 +87,10 @@ export default function ChatClient({
         setChatTitle,
         persona,
         userDisplayName,
+        activeSpeakingId,
+        setActiveSpeakingId,
+        voiceEnabled,
+        setVoiceEnabled,
         showAffectionPanel,
         onToggleAffectionPanel: () => setShowAffectionPanel((v) => !v),
         onOpenPersonaModal: () => setShowPersonaModal(true),

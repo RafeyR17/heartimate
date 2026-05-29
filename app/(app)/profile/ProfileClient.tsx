@@ -19,6 +19,7 @@ import {
   PersonasTab,
 } from './profile-sections'
 import { LogoutButton } from '@/components/LogoutButton'
+import BetaDiscordInvite from '@/components/BetaDiscordInvite'
 import { useToast } from '@/components/ToastProvider'
 import { apiFetch, applyApiFetchFailure } from '@/lib/api-client'
 import { useProfileInvalidate } from '@/lib/query/use-profile-invalidate'
@@ -467,6 +468,8 @@ function ProfilePageInner(props: ProfileClientProps) {
           </>
           )}
         </div>
+
+        <BetaDiscordInvite className="mt-10 mb-2" />
       </div>
 
       {editOpen && (

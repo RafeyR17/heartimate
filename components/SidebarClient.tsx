@@ -21,6 +21,7 @@ import Image from "next/image";
 import { Suspense, useEffect } from "react";
 import { LogoutButton } from "./LogoutButton";
 import { StreakWidget } from "./StreakWidget";
+import BetaDiscordInvite from "./BetaDiscordInvite";
 import { MOBILE_NAV_BACKDROP_CLASS, useMobileNav } from "./MobileNavProvider";
 import { cn } from "@/lib/utils";
 import { pickPersonaName, type SidebarChatItem } from "@/lib/app-types";
@@ -104,6 +105,10 @@ function SidebarPanel({
 
         {isSignedIn && (
           <StreakWidget streakCount={streakCount} avatarUrl={chats?.[0]?.character?.avatar_url || null} />
+        )}
+
+        {isSignedIn && (
+          <BetaDiscordInvite className="mx-1 mt-4 p-4 [&_p:first-of-type]:text-[15px] [&_a]:py-3 [&_a]:text-[13px]" />
         )}
 
         {isSignedIn && chats.length > 0 && (

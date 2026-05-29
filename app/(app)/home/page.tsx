@@ -40,60 +40,99 @@ export default async function HomePage() {
       <StreakSync />
       
       {/* SECTION 1 - HERO BANNER */}
-      <section
-        className="relative w-full rounded-2xl overflow-hidden flex flex-col items-center justify-center text-center max-md:h-[200px]"
-        style={{ height: 'clamp(200px, 40vw, 380px)' }}
-      >
+      <section className="relative w-full rounded-2xl overflow-hidden flex flex-col items-center text-center py-8 px-4 sm:px-6 md:min-h-[340px] md:py-12 md:justify-center">
         {/* Layered backgrounds */}
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0d0010 0%, #1a0028 40%, #0d0010 100%)' }} />
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 60% at 60% 50%, rgba(232,80,122,0.15), transparent)' }} />
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 40% 40% at 20% 80%, rgba(150,20,80,0.1), transparent)' }} />
 
-        {/* Welcome label top-left */}
-        <p className="absolute top-5 left-6 font-label text-[11px] text-rose uppercase tracking-[0.15em]">
+        {/* Welcome label — in flow on mobile; corner on desktop */}
+        <p className="relative z-10 w-full max-w-2xl font-label text-[10px] sm:text-[11px] text-rose uppercase tracking-[0.15em] mb-4 text-left truncate md:absolute md:top-5 md:left-6 md:mb-0 md:max-w-[min(280px,calc(100%-3rem))]">
           // WELCOME BACK, {user.display_name}
         </p>
 
         {/* Centered content */}
-        <div className="relative z-10 flex flex-col items-center px-6 max-w-2xl mx-auto">
+        <div className="relative z-10 flex w-full max-w-2xl flex-col items-center">
           {/* Pill tag */}
           <div
-            className="mb-6 inline-flex items-center px-4 py-1.5 rounded-full font-body font-medium text-[12px] text-rose"
+            className="mb-4 sm:mb-6 inline-flex items-center px-3 sm:px-4 py-1.5 rounded-full font-body font-medium text-[11px] sm:text-[12px] text-rose"
             style={{ background: 'rgba(232,80,122,0.15)', border: '1px solid rgba(232,80,122,0.3)' }}
           >
             ✦ Your private sanctuary
           </div>
 
           {/* Heading */}
-          <h1 className="font-heading leading-[1.1] mb-4" style={{ fontSize: 'clamp(36px, 6vw, 64px)' }}>
+          <h1 className="font-heading leading-[1.1] mb-3 sm:mb-4 text-[28px] sm:text-[36px] md:text-[52px] lg:text-[64px] w-full">
             <span className="italic text-rose block">Someone is waiting</span>
             <span className="font-bold text-white block">just for you.</span>
           </h1>
 
           {/* Subtext */}
-          <p className="font-body font-light text-[16px] max-w-[480px] mx-auto mb-8" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          <p
+            className="font-body font-light text-[14px] sm:text-[16px] max-w-[480px] mx-auto mb-5 sm:mb-8 px-1"
+            style={{ color: 'rgba(255,255,255,0.5)' }}
+          >
             AI companions with deep memory and no restrictions. Your private world.
           </p>
 
           {/* Buttons */}
-          <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-center w-full max-md:px-2">
+          <div className="flex w-full max-w-md flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3">
             <Link
               href={hasRecentChats ? "/profile?tab=chats" : "/explore"}
-              className="max-md:w-[48%] max-md:min-w-0 bg-rose text-white px-4 md:px-6 py-3 rounded-full font-body font-medium text-[13px] hover:bg-rose/90 transition-colors shadow-[0_0_20px_rgba(232,80,122,0.35)] min-h-[44px] inline-flex items-center justify-center"
+              className="w-full sm:w-auto sm:flex-1 sm:min-w-[140px] bg-rose text-white px-5 md:px-6 py-3 rounded-full font-body font-medium text-[13px] hover:bg-rose/90 transition-colors shadow-[0_0_20px_rgba(232,80,122,0.35)] min-h-[44px] inline-flex items-center justify-center"
             >
               {hasRecentChats ? "Continue chatting →" : "Start exploring →"}
             </Link>
             <Link
               href="/explore"
-              className="max-md:w-[48%] max-md:min-w-0 text-white/70 hover:text-white px-4 md:px-6 py-3 rounded-full font-body font-medium text-[13px] border border-white/15 hover:bg-white/5 transition-colors min-h-[44px] inline-flex items-center justify-center"
+              className="w-full sm:w-auto sm:flex-1 sm:min-w-[140px] text-white/70 hover:text-white px-5 md:px-6 py-3 rounded-full font-body font-medium text-[13px] border border-white/15 hover:bg-white/5 transition-colors min-h-[44px] inline-flex items-center justify-center"
             >
               Find someone new
             </Link>
           </div>
+
+          {/* Avatar cluster — below CTAs on mobile, corner on desktop */}
+          <div className="mt-6 flex justify-center md:hidden">
+            {hasRecentChats ? (
+              chats.map((chat, i) => (
+                <div
+                  key={chat.id}
+                  className="relative w-10 h-10 rounded-full border-2 border-[#1a0028] overflow-hidden bg-[#0d0a0e]"
+                  style={{
+                    zIndex: 3 - i,
+                    marginLeft: i === 0 ? 0 : '-12px',
+                    boxShadow: '0 0 20px rgba(232,80,122,0.3)',
+                  }}
+                >
+                  <Image src={resolveCharacterImageSrc(chat.character?.avatar_url)} alt={chat.character?.name || "Character"} fill className="object-cover object-top" sizes="40px" />
+                </div>
+              ))
+            ) : (
+              <>
+                {[
+                  { src: "/images/characters/lyra.jpg", alt: "Lyra", z: 30 },
+                  { src: "/images/characters/kai.jpg", alt: "Kai", z: 20 },
+                  { src: "/images/characters/aria.jpg", alt: "Aria", z: 10 },
+                ].map((char, i) => (
+                  <div
+                    key={char.alt}
+                    className="relative w-10 h-10 rounded-full border-2 border-[#1a0028] overflow-hidden bg-[#0d0a0e]"
+                    style={{
+                      zIndex: char.z,
+                      marginLeft: i === 0 ? 0 : '-12px',
+                      boxShadow: '0 0 20px rgba(232,80,122,0.3)',
+                    }}
+                  >
+                    <Image src={char.src} alt={char.alt} fill className="object-cover object-top" sizes="40px" />
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Avatar cluster — bottom right */}
-        <div className="absolute bottom-3 right-4 md:bottom-5 md:right-6 flex max-md:scale-90">
+        {/* Avatar cluster — bottom right (desktop only) */}
+        <div className="absolute bottom-3 right-4 md:bottom-5 md:right-6 hidden md:flex">
           {hasRecentChats ? (
             chats.map((chat, i) => (
               <div
